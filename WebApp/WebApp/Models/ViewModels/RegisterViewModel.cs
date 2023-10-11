@@ -10,9 +10,9 @@ namespace WebApp.Models.ViewModels
 		[Display(Name = "Email")]
 		public string Email { get; set; }
 
-		[Required]
+		/*[Required]
 		[Display(Name = "Год рождения")]
-		public int Year { get; set; }
+		public int Year { get; set; }*/
 
 		[Required]
 		[DataType(DataType.Password)]
