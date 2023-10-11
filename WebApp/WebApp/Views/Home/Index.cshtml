@@ -1,4 +1,40 @@
-﻿<h1>Home</h1>
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+
+<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="File" asp-action="UserMainPage">UserMainPage</a></h3>
+<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="File" asp-action="AdministratorMainPage">AdministratorMainPage</a></h3>
+
+
+@if (User.Identity.IsAuthenticated)
+{
+    <p>@User.Identity.Name</p>
+
+    <form method="post" asp-controller="Account" asp-action="Logout">
+        <input type="submit" value="Выход" />
+    </form>
+}
+else
+{
+    @*<a asp-controller="Account" asp-action="LoginAction">Вход</a>*@
+    <a asp-controller="Account" asp-action="Login">Вход</a>
+    <a asp-controller="Account" asp-action="Register">Регистрация</a>
+}
+
+
+<p>
+    IsAuthenticated : @User.Identity.IsAuthenticated
+</p>
+
+<p>
+    Name : @User.Identity.Name
+</p>
+
+
+
+
+@*<h1>Home</h1>
 <h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="File" asp-action="UserMainPage">UserMainPage</a></h3>
 <h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="File" asp-action="AdministratorMainPage">AdministratorMainPage</a></h3>
 
@@ -18,4 +54,4 @@ else
 
 <p>
 	Name : @ViewBag.Name
-</p>
+</p>*@

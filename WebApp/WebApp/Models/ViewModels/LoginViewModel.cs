@@ -4,11 +4,20 @@ namespace WebApp.Models.ViewModels
 {
 	public class LoginViewModel
 	{
+
 		[Required]
-		public string UserName { get; set; }
+		[Display(Name = "Email")]
+		public string Email { get; set; }
+
 		[Required]
+		[DataType(DataType.Password)]
+		[Display(Name = "Пароль")]
 		public string Password { get; set; }
-		[Required]
-		public string ReturnUrl { get; set; }
+
+		[Display(Name = "Запомнить?")]
+		public bool RememberMe { get; set; }
+
+
+		public string? ReturnUrl { get; set; }
 	}
 }
