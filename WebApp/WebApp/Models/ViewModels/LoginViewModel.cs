@@ -4,7 +4,6 @@ namespace WebApp.Models.ViewModels
 {
 	public class LoginViewModel
 	{
-
 		[Required]
 		[Display(Name = "Email")]
 		public string Email { get; set; }
@@ -16,7 +15,6 @@ namespace WebApp.Models.ViewModels
 
 		[Display(Name = "Запомнить?")]
 		public bool RememberMe { get; set; }
-
 
 		public string? ReturnUrl { get; set; }
 	}

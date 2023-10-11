@@ -7,7 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\css\" />
+    <Folder Include="wwwroot\css\Home\" />
+    <Folder Include="wwwroot\css\Account\" />
+    <Folder Include="wwwroot\css\File\" />
+    <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\js\" />
   </ItemGroup>
 

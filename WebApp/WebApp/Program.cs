@@ -12,13 +12,10 @@ namespace WebApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            #region Connection to DB
 
-
-
-
-
-			string connection = builder.Configuration.GetConnectionString("DefaultConnection");
-
+            
+            string connection = builder.Configuration.GetConnectionString("DefaultConnection");
 
 			builder.Services
                 .AddDbContext<ApplicationContext>(options => options.UseNpgsql(connection));
@@ -35,38 +32,26 @@ namespace WebApp
                 .AddEntityFrameworkStores<ApplicationContext>();
 
 
+            #endregion
 
-
-            /*builder.Services.AddAuthentication("Cookie").AddCookie("Cookie", config => {
-                config.LoginPath = "/Account/Login";
-                config.AccessDeniedPath = "/Home/AccessDenied";
-
-            });*/
-
+            #region Configuration of Authentication & Authorization
+            
             builder.Services.ConfigureApplicationCookie(config =>
             {
                 config.LoginPath = "/Account/Login";
                 config.AccessDeniedPath = "/Home/AccessDenied";
             });
 
-
-
             builder.Services.AddAuthorization(options => {
                 options.AddPolicy("User", b => b.RequireAssertion(x =>
                                                 x.User.HasClaim(ClaimTypes.Role, "User") ||
                                                 x.User.HasClaim(ClaimTypes.Role, "Administrator")));
 
-
                 options.AddPolicy("Administrator", b => b.RequireAssertion(x =>
                                                 x.User.HasClaim(ClaimTypes.Role, "Administrator")));
             });
 
-
-
-
-
-
-
+            #endregion
 
             builder.Services.AddControllersWithViews();
 
@@ -81,10 +66,12 @@ namespace WebApp
             app.UseStaticFiles();
             app.UseRouting();
 
-
+            #region Add Authentication & Authorization
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            #endregion
 
             app.MapControllerRoute(
                 name: "default",
