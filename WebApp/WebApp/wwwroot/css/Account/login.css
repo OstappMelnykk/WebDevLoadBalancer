@@ -1,0 +1,167 @@
+﻿@import url('https://rsms.me/inter/inter-ui.css');
+
+body {
+    background: white;
+    font-family: 'Inter UI', sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+.page {
+    background: linear-gradient(to left, #7a60ff, #cd9ffa);
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 40px);
+    position: absolute;
+    place-content: center;
+    width: calc(100% - 40px);
+}
+
+.container {
+    display: flex;
+    height: 320px;
+    margin: 0 auto;
+    width: 640px;
+}
+
+.left {
+    background: white;
+    height: calc(100% - 40px);
+    top: 20px;
+    position: relative;
+    width: 50%;
+}
+
+.login {
+    font-size: 50px;
+    font-weight: 900;
+    margin: 50px 40px 40px;
+}
+
+.eula {
+    color: #999;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 40px;
+}
+
+.right {
+    background: #432169;
+    box-shadow: 0px 0px 40px 16px rgba(0, 0, 0, 0.22);
+    color: #F1F1F2;
+    position: relative;
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.form {
+    position: absolute;
+    height: calc(100% - 60px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: flex-start;
+}
+
+
+form {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: flex-start;
+}
+
+
+label {
+    color: #c2c2c5;
+    display: block;
+    font-size: 19px;
+    height: 21px;
+}
+
+input, #link-button {
+    background: transparent;
+    border: 0;
+    color: #f2f2f2;
+    font-size: 20px;
+    height: 30px;
+    line-height: 30px;
+    outline: none !important;
+    width: 100%;
+}
+
+input::placeholder {
+    font-size: 2.2em;
+}
+
+input::-moz-focus-inner {
+    border: 0;
+}
+
+#submit, #link-button {
+    color: #ffffff;
+    transition: color 300ms;
+    transition: background-color 0.3s;
+    border-radius: 5px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#submit:hover, #link-button:hover {
+    color: #f2f2f2;
+    background-color: #73329e;
+}
+
+#link-button {
+    text-decoration: none;
+    width: 100%;
+}
+
+.sisu {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.AspValidationSummary {
+    font-size: 13px;
+    list-style-type: none;
+    color: #bf0f0f;
+}
+
+.AspValidationSummary ul {
+
+    list-style-type: none;
+}
+
+.backLink {
+    background: transparent;
+    border: 0;
+    color: #f2f2f2;
+    font-size: 20px;
+    height: 30px;
+    line-height: 30px;
+    outline: none !important;    
+    transition: color 300ms;
+    transition: background-color 0.3s;
+    border-radius: 5px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    width: 100%;
+}
+
+
+.backLink:hover {
+    color: #f2f2f2;
+    background-color: #73329e;
+}
