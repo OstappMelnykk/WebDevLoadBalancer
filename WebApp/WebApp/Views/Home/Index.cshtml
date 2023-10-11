@@ -1,3 +1,21 @@
-﻿
+﻿<h1>Home</h1>
+<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="File" asp-action="UserMainPage">UserMainPage</a></h3>
+<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="File" asp-action="AdministratorMainPage">AdministratorMainPage</a></h3>
 
-<h1 class="display-4">Welcome</h1>
+
+@if (@ViewBag.IsAuthenticated)
+{
+	<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="Account" asp-action="LogOff">Log Off</a></h3>
+}
+else
+{
+	<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="Account" asp-action="LoginAction">Log IN</a></h3>
+}
+
+<p>
+	IsAuthenticated : @ViewBag.IsAuthenticated
+</p>
+
+<p>
+	Name : @ViewBag.Name
+</p>
