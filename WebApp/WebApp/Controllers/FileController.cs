@@ -17,6 +17,8 @@ namespace WebApp.Controllers
 
         public IActionResult Index() => View();
 
+        [RequestFormLimits(MultipartBodyLengthLimit = 104857600)] // 100 MB
+        [RequestSizeLimit(104857600)] // 100 MB
         [HttpPost]
         public async Task<ActionResult> Index(IFormFile file)
         {

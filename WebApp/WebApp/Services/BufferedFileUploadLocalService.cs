@@ -23,7 +23,7 @@ namespace WebApp.Services
 
                     if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 
-                    using (var fileStream = new FileStream(Path.Combine(path, $"{file.FileName.Split(".")[0]}{variable}.{file.FileName.Split(".")[1]}"), FileMode.Create)){
+                    using (var fileStream = new FileStream(Path.Combine(path, $"{variable}-{file.FileName}"), FileMode.Create)){
                         await file.CopyToAsync(fileStream);
                     }
 
