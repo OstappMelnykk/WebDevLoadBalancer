@@ -2,6 +2,6 @@
 {
     public interface IBufferedFileUploadService
     {
-        Task<bool> UploadFile(IFormFile file);
+        Task<bool> UploadFile(IFormFile file, dynamic UserName);
     }
 }

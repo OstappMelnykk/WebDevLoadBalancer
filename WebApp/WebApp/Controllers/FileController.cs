@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Runtime.ConstrainedExecution;
 using WebApp.Interfaces;
 using WebApp.Models;
 
@@ -9,6 +10,10 @@ namespace WebApp.Controllers
     public class FileController : Controller
     {
         readonly IBufferedFileUploadService _bufferedFileUploadService;
+        private static int i = 0;
+
+       /* var NAme = User.Identity.Name;*/
+
 
         public FileController(IBufferedFileUploadService bufferedFileUploadService)
         {
@@ -17,14 +22,15 @@ namespace WebApp.Controllers
 
         public IActionResult Upload() => View();
 
-        [RequestFormLimits(MultipartBodyLengthLimit = 104857600)] // 100 MB
-        [RequestSizeLimit(104857600)] // 100 MB
+
+        [RequestFormLimits(MultipartBodyLengthLimit = 1048576000)] // 1000 MB
+        [RequestSizeLimit(1048576000)] // 1000 MB
         [HttpPost]
         public async Task<ActionResult> Upload(IFormFile file)
         {
             try
             {
-                if (await _bufferedFileUploadService.UploadFile(file))
+                if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name))
                     ViewBag.Message = "File Upload Successful";
                 else
                     ViewBag.Message = "File Upload Failed";

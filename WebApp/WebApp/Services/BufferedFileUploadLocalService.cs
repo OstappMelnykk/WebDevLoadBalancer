@@ -9,9 +9,9 @@ namespace WebApp.Services
 {
     public class BufferedFileUploadLocalService : IBufferedFileUploadService
     {
-        private string variable = "VAR";
-
-        public async Task<bool> UploadFile(IFormFile file)
+       /* private string variable = "VAR";*/
+        private static int i = 1;
+        public async Task<bool> UploadFile(IFormFile file, dynamic UserName)
         {
             string path = "";
 
@@ -19,12 +19,13 @@ namespace WebApp.Services
 
                 if (file.Length > 0){
 
-                    path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "UploadedFiles"));
+                    path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, $"UploadedFiles/{UserName}"));
 
                     if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 
-                    using (var fileStream = new FileStream(Path.Combine(path, $"{variable}-{file.FileName}"), FileMode.Create)){
+                    using (var fileStream = new FileStream(Path.Combine(path, $"{UserName}--{file.FileName}"), FileMode.Create)){
                         await file.CopyToAsync(fileStream);
+                        i++;
                     }
 
                     return true;
