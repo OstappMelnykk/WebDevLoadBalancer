@@ -13,7 +13,6 @@ namespace WebApp.Controllers
             ViewBag.Name = User.Identity.Name;
             ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
             return View(); 
-            /*return View(_context.Files.ToList());*/
         }
 
         

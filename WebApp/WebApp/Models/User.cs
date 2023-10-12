@@ -2,8 +2,5 @@
 
 namespace WebApp.Models
 {
-	public class User : IdentityUser
-	{
-
-	}
+	public class User : IdentityUser {}
 }

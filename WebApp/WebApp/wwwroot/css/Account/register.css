@@ -19,7 +19,6 @@ body {
 
 .container {
     display: flex;
-   /* height: 320px;*/
     height: 320px;
     margin: 0 auto;
     width: 640px;
@@ -51,12 +50,10 @@ body {
     box-shadow: 0px 0px 40px 16px rgba(0, 0, 0, 0.22);
     color: #F1F1F2;
     position: relative;
-
     width: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-
 }
 
 .form {
@@ -65,10 +62,8 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    align-items: flex-start;
-    
+    align-items: flex-start; 
 }
-
 
 form {
     height: 100%;
@@ -78,7 +73,6 @@ form {
     justify-content: space-evenly;
     align-items: flex-start;
 }
-
 
 label {
     color: #c2c2c5;
@@ -98,13 +92,13 @@ input, #link-button {
     width: 100%;
 }
 
-    input::placeholder {
-        font-size: 2.2em;
-    }
+input::placeholder {
+    font-size: 2.2em;
+}
 
-    input::-moz-focus-inner {
-        border: 0;
-    }
+input::-moz-focus-inner {
+    border: 0;
+}
 
 #submit, #link-button {
     color: #ffffff;
@@ -117,10 +111,10 @@ input, #link-button {
     align-items: center;
 }
 
-    #submit:hover, #link-button:hover {
-        color: #f2f2f2;
-        background-color: #73329e;
-    }
+#submit:hover, #link-button:hover {
+    color: #f2f2f2;
+    background-color: #73329e;
+}
 
 #link-button {
     text-decoration: none;
@@ -140,10 +134,10 @@ input, #link-button {
     color: #bf0f0f;
 }
 
-    .AspValidationSummary ul {
-        list-style-type: none;
-        padding: 5px;
-    }
+.AspValidationSummary ul {
+    list-style-type: none;
+    padding: 5px;
+}
 
 .backLink {
     background: transparent;
@@ -164,8 +158,7 @@ input, #link-button {
     width: 100%;
 }
 
-
-    .backLink:hover {
-        color: #f2f2f2;
-        background-color: #73329e;
-    }
+.backLink:hover {
+    color: #f2f2f2;
+    background-color: #73329e;
+}

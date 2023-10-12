@@ -16,7 +16,6 @@ namespace WebApp
 
             builder.Services.AddTransient<IBufferedFileUploadService, BufferedFileUploadLocalService>();
 
-
             #region Connection to DB
 
 
@@ -81,12 +80,6 @@ namespace WebApp
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
-
-
-
-
-
-
 
             app.Run();
         }
