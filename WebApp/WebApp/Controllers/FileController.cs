@@ -15,12 +15,12 @@ namespace WebApp.Controllers
             _bufferedFileUploadService = bufferedFileUploadService;
         }
 
-        public IActionResult Index() => View();
+        public IActionResult Upload() => View();
 
         [RequestFormLimits(MultipartBodyLengthLimit = 104857600)] // 100 MB
         [RequestSizeLimit(104857600)] // 100 MB
         [HttpPost]
-        public async Task<ActionResult> Index(IFormFile file)
+        public async Task<ActionResult> Upload(IFormFile file)
         {
             try
             {
