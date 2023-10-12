@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApp.Interfaces;
 using WebApp.Models;
 
 namespace WebApp.Controllers
@@ -7,36 +8,30 @@ namespace WebApp.Controllers
     [Authorize]
     public class FileController : Controller
     {
+        readonly IBufferedFileUploadService _bufferedFileUploadService;
 
-        /*FileContext _context;
-        IWebHostEnvironment _appEnvironment;
-
-        public FileController(FileContext context, IWebHostEnvironment appEnvironment)
+        public FileController(IBufferedFileUploadService bufferedFileUploadService)
         {
-            _context = context;
-            _appEnvironment = appEnvironment;
-        }*/
-
-
-
-
-
-
-
-        /*[Authorize(Policy = "User")]
-        public IActionResult UserMainPage()
-        {
-            ViewBag.Name = User.Identity.Name;
-            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
-            return View(_context.Files.ToList());
+            _bufferedFileUploadService = bufferedFileUploadService;
         }
 
-        [Authorize(Policy = "Administrator")]
-        public IActionResult AdministratorMainPage()
+        public IActionResult Index() => View();
+
+        [HttpPost]
+        public async Task<ActionResult> Index(IFormFile file)
         {
-            ViewBag.Name = User.Identity.Name;
-            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
+            try
+            {
+                if (await _bufferedFileUploadService.UploadFile(file))
+                    ViewBag.Message = "File Upload Successful";
+                else
+                    ViewBag.Message = "File Upload Failed";
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Message = "File Upload Failed";
+            }
             return View();
-        }*/
+        }
     }
 }

@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
+using WebApp.Interfaces;
 using WebApp.Models;
+using WebApp.Services;
 
 namespace WebApp
 {
@@ -12,9 +14,12 @@ namespace WebApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddTransient<IBufferedFileUploadService, BufferedFileUploadLocalService>();
+
+
             #region Connection to DB
 
-            
+
             string connection = builder.Configuration.GetConnectionString("DefaultConnection");
 
 			builder.Services
@@ -76,6 +81,12 @@ namespace WebApp
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+
+
+
+
+
+
 
             app.Run();
         }
