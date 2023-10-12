@@ -7,9 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Views\File\" />
     <Folder Include="wwwroot\css\File\" />
     <Folder Include="wwwroot\css\Home\" />
     <Folder Include="wwwroot\js\" />
+    <Folder Include="wwwroot\FileStore\" />
   </ItemGroup>
 
   <ItemGroup>
