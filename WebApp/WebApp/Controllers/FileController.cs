@@ -42,31 +42,74 @@ namespace WebApp.Controllers
             var files = db.FilesToConvet.ToList();
 
 
-            foreach (var item in files)
+
+
+            long elapsedTimeMilliseconds = MeasureTime(() =>
             {
-                string filePath = item.FullPathToFile;
 
-                ConvertXlsxToTxt(filePath, item.FileName.Split(".")[0], db);
-
-
-                if (System.IO.File.Exists(filePath))
+                foreach (var item in files)
                 {
-                    try
+                    string filePath = item.FullPathToFile;
+
+                    ConvertXlsxToTxt(filePath, item.FileName.Split(".")[0], db);
+
+
+                    if (System.IO.File.Exists(filePath))
                     {
-                        System.IO.File.Delete(filePath);
-                    }
-                    catch (Exception e)
-                    {
-                        return Content($"Сталася помилка при видаленні файлу: {e.Message}");
+                        try
+                        {
+                            System.IO.File.Delete(filePath);
+                        }
+                        catch (Exception e)
+                        {
+                            /*return Content($"Сталася помилка при видаленні файлу: {e.Message}");*/
+                        }
                     }
                 }
-            }
 
-            db.DeleteFromFilesToConvet();
+                db.DeleteFromFilesToConvet();
 
 
-            return RedirectToAction("Index", "file");
+
+            });
+
+
+
+
+
+
+            return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
+            //return RedirectToAction("Index", "file");
         }
+
+
+
+        [NonAction]
+        private long MeasureTime(Action action)
+        {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            action();
+
+            stopwatch.Stop();
+            long elapsedTimeMilliseconds = stopwatch.ElapsedMilliseconds;
+            return elapsedTimeMilliseconds;
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -125,8 +168,12 @@ namespace WebApp.Controllers
         }
 
 
-        [RequestFormLimits(MultipartBodyLengthLimit = 1048576000)] // 1000 MB
-        [RequestSizeLimit(1048576000)] // 1000 MB
+        /*[RequestFormLimits(MultipartBodyLengthLimit = 1048576000)] // 1000 MB
+        [RequestSizeLimit(1048576000)] // 1000 MB*/
+                                       
+                                       
+        [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
+        [RequestSizeLimit(209715200)] // 200 MB
         [HttpPost]
         public async Task<ActionResult> Upload(IFormFile file)
         {
@@ -153,17 +200,6 @@ namespace WebApp.Controllers
 
 
   
-        [NonAction]
-        private static void MeasureTime(Action action)
-        {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-
-            action();
-
-            stopwatch.Stop();
-            long elapsedTimeMilliseconds = stopwatch.ElapsedMilliseconds;
-            Console.WriteLine($"Elapsed Time: {elapsedTimeMilliseconds} ms");
-        }
+        
     }
 }

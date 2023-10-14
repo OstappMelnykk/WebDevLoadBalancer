@@ -19,5 +19,10 @@ namespace WebApp.Models
         {
             Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesToConvet\"");
         }
+
+        public void DeleteFromFilesAlreadyConverted()
+        {
+            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesAlreadyConverted\"");
+        }
     }
 }
