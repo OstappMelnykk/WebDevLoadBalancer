@@ -25,8 +25,16 @@ namespace WebApp.Controllers
 
         
 
-        public IActionResult Index() => View(db.FilesToConvet.ToList());
+        /*public IActionResult Index() => View(db.FilesToConvet.ToList());*/
 
+
+        public IActionResult Index()
+        {
+            ViewBag.DBFilesToConvet = db.FilesToConvet.ToList();
+            ViewBag.DBFilesAlreadyConverted = db.FilesAlreadyConverted.ToList();
+
+            return View();
+        }
 
         [HttpPost]
         public async Task<ActionResult> Process()

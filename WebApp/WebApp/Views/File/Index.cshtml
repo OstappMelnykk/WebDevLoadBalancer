@@ -1,5 +1,5 @@
-﻿@model List<FileToConvetModel>
-
+﻿@*@model List<FileToConvetModel>
+*@
 
 
 <h1>Buffered File Upload</h1>
@@ -31,7 +31,17 @@ Process
 
 
 <ul>
-    @foreach (var item in Model)
+    @foreach (var item in ViewBag.DBFilesToConvet)
+    {
+            <li>@item.FileName</li>
+    }   
+</ul 
+
+
+<h1>===============================================</h1>
+
+<ul>
+    @foreach (var item in ViewBag.DBFilesAlreadyConverted)
     {
             <li>@item.FileName</li>
     }   
