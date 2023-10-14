@@ -10,5 +10,7 @@ namespace WebApp.Models
 		{
 			Database.EnsureCreated();
 		}
-	}
+
+        /*public DbSet<FileModel> Files { get; set; }*/
+    }
 }
