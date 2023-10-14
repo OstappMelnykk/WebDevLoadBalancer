@@ -5,12 +5,19 @@ namespace WebApp.Models
 {
 	public class ApplicationContext : IdentityDbContext<User>
 	{
-		public ApplicationContext(DbContextOptions<ApplicationContext> options)
+        public DbSet<FileToConvetModel> FilesToConvet { get; set; }
+        public DbSet<FileAlreadyConverted> FilesAlreadyConverted { get; set; }
+
+
+        public ApplicationContext(DbContextOptions<ApplicationContext> options)
 			: base(options)
 		{
 			Database.EnsureCreated();
 		}
 
-        /*public DbSet<FileModel> Files { get; set; }*/
+        public void DeleteFromFilesToConvet()
+        {
+            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesToConvet\"");
+        }
     }
 }

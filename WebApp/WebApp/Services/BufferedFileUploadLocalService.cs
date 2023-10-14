@@ -7,27 +7,44 @@ using WebApp.Models;
 
 namespace WebApp.Services
 {
+
+    //IFormFile file, dynamic UserName, ApplicationContext db, string FolderName
     public class BufferedFileUploadLocalService : IBufferedFileUploadService
     {
         private static int i = 1;
-        public async Task<bool> UploadFile(IFormFile file, dynamic UserName)
+        public async Task<bool> UploadFile(IFormFile file, dynamic UserName, ApplicationContext context)
         {
             string path = "";
 
-            try{
+            try
+            {
 
-                if (file.Length > 0){
+                if (file.Length > 0)
+                {
 
-                   path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, $"UploadedFiles/{UserName}"));
+                    path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, $"UploadedFiles/{UserName}"));
 
-                   if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+                    if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 
-                   using (var fileStream = new FileStream(Path.Combine(path, $"{i}--{UserName}--{file.FileName}"), FileMode.Create)){
-                       await file.CopyToAsync(fileStream);
-                       i++;
-                   }
+                    using (var fileStream = new FileStream(Path.Combine(path, $"{i}--{file.FileName}"), FileMode.Create))
+                    {
+                        await file.CopyToAsync(fileStream);
 
-                   return true;
+
+                        FileToConvetModel fileModel = new FileToConvetModel()
+                        {
+                            FileName = $"{i}--{file.FileName}",
+                            PathToFolder = path,
+                            FullPathToFile = path + "\\" + $"{i}--{file.FileName}",
+                        };
+                        context.FilesToConvet.AddRange(fileModel);
+                        context.SaveChanges();
+
+
+                        i++;
+                    }
+
+                    return true;
                 }
 
                 else return false;

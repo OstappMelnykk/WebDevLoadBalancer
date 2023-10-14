@@ -2,13 +2,16 @@
 
 namespace WebApp.Models
 {
-    public class FileModel
+    public class FileAlreadyConverted
     {
         [Key]
         public int Id { get; set; }
         [Required]
         public string FileName { get; set; }
         [Required]
-        public string FilePath { get; set; }
+        public string PathToFolder { get; set; }
+
+        [Required]
+        public string FullPathToFile { get; set; }
     }
 }

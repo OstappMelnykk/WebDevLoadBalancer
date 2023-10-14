@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="UploadedFiles\" />
+    <Folder Include="ConvertedFiles\" />
     <Folder Include="wwwroot\css\File\" />
     <Folder Include="wwwroot\css\Home\" />
     <Folder Include="wwwroot\js\" />

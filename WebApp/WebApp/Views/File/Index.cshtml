@@ -1,7 +1,9 @@
-﻿<h1>Buffered File Upload</h1>
+﻿@model List<FileToConvetModel>
+
+
+
+<h1>Buffered File Upload</h1>
 <a asp-controller="Home" asp-action="index">Home</a>
-<br />
-<a asp-controller="File" asp-action="AllFiles">AllFiles</a>
 <br />
 <a asp-controller="Account" asp-action="LogOff">Log off</a>
 <br />
@@ -13,9 +15,24 @@
     <button type="submit">Upload File</button>
 </form>
 
+
+<form asp-controller="File" asp-action="Process" method="post" enctype="multipart/form-data">
+    <button type="submit">Process File</button>
+</form>
+
+Process
+
 @if (ViewBag.Message != null)
 {
     <div class="alert" style="margin-top:20px">
         @ViewBag.Message
     </div>
 }
+
+
+<ul>
+    @foreach (var item in Model)
+    {
+            <li>@item.FileName</li>
+    }   
+</ul 

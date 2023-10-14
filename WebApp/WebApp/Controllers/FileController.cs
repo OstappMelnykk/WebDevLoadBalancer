@@ -7,6 +7,7 @@ using WebApp.Models;
 using OfficeOpenXml;
 using System.Diagnostics;
 using System.Drawing;
+using LicenseContext = OfficeOpenXml.LicenseContext;
 
 namespace WebApp.Controllers
 {
@@ -14,58 +15,107 @@ namespace WebApp.Controllers
     public class FileController : Controller
     {
         readonly IBufferedFileUploadService _bufferedFileUploadService;
-        /*private static int i = 0;*/
+        ApplicationContext db;
 
-
-       /* private bool IsUpload = false;
-        private bool IsProcessed = false;*/
-
-        public FileController(IBufferedFileUploadService bufferedFileUploadService)
+        public FileController(ApplicationContext context, IBufferedFileUploadService bufferedFileUploadService)
         {
             _bufferedFileUploadService = bufferedFileUploadService;
+            db = context;
         }
 
-        public IActionResult Index() => View();
+        
 
-        /*public IActionResult AllFiles()
+        public IActionResult Index() => View(db.FilesToConvet.ToList());
+
+
+        [HttpPost]
+        public async Task<ActionResult> Process()
         {
-            ViewBag.Name = User.Identity.Name;
-            ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
+            var files = db.FilesToConvet.ToList();
+
+
+            foreach (var item in files)
+            {
+                string filePath = item.FullPathToFile;
+
+                ConvertXlsxToTxt(filePath, item.FileName.Split(".")[0], db);
+
+
+                if (System.IO.File.Exists(filePath))
+                {
+                    try
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
+                    catch (Exception e)
+                    {
+                        return Content($"Сталася помилка при видаленні файлу: {e.Message}");
+                    }
+                }
+            }
+
+            db.DeleteFromFilesToConvet();
+
+
+            return RedirectToAction("Index", "file");
+        }
+
+
+
+
+
+        [NonAction]
+        private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            FileInfo file = new FileInfo(xlsxFilePath);
+            string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
+            string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
             
-            return View(LookIn($"C:\\Users\\Comp_Zona\\Desktop\\WebDev\\WebApp\\WebApp\\UploadedFiles\\{User.Identity.Name}"));
+            Directory.CreateDirectory(txtFilePath);
+
+            using (ExcelPackage package = new ExcelPackage(file))
+            {
+                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+                int rowCount = worksheet.Dimension.Rows;
+                int colCount = worksheet.Dimension.Columns;
+
+                string horizontalLine = new string('-', colCount * 26 + 17);
+
+                using (StreamWriter writer = new StreamWriter(Path.Combine(txtFilePath, $"{newFileName}.txt")))
+                {
+                    writer.WriteLine(horizontalLine);
+
+                    for (int col = 1; col <= colCount; col++)
+                        writer.Write($"| {worksheet.Cells[1, col].Text,-25}");
+
+                    writer.WriteLine("|");
+                    writer.WriteLine(horizontalLine);
+
+                    for (int row = 2; row <= rowCount; row++)
+                    {
+                        for (int col = 1; col <= colCount; col++)
+                            writer.Write($"| {worksheet.Cells[row, col].Text,-25}");
+
+                        writer.WriteLine("|");
+                    }
+
+                    writer.WriteLine(horizontalLine);
+                }
+            }
+
+
+
+            FileAlreadyConverted fileModel = new FileAlreadyConverted()
+            {
+                FileName = $"{newFileName}.txt",
+                PathToFolder = txtFilePath,
+                FullPathToFile = txtFilePath + "\\" + $"{newFileName}.txt",
+            };
+            db.FilesAlreadyConverted.Add(fileModel);
+            db.SaveChanges();
         }
 
-
-
-        private List<string> LookIn(string path)
-        {
-            List<string> files = new List<string>();
-            List<string> dirs = new List<string>();
-
-            try
-            {
-                files.AddRange(Directory.GetFiles(path));
-                dirs.AddRange(Directory.GetDirectories(path));
-            }
-            catch (UnauthorizedAccessException e)
-            {
-                //Console.WriteLine(e.Message);
-            }
-
-            foreach (string dir in dirs)
-            {
-                files.AddRange(LookIn(dir));
-            }
-            return files;
-        }*/
-
-
-
-
-
-
-
-        /* public IActionResult Upload() => View();*/
 
         [RequestFormLimits(MultipartBodyLengthLimit = 1048576000)] // 1000 MB
         [RequestSizeLimit(1048576000)] // 1000 MB
@@ -74,12 +124,10 @@ namespace WebApp.Controllers
         {
             try
             {
-                if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name))
+                if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name, db))
                 {
                     ViewBag.Message = "File Upload Successful";
-                }
-                   
-                
+                }                        
                 else
                 {
                     ViewBag.Message = "File Upload Failed";
@@ -92,64 +140,11 @@ namespace WebApp.Controllers
                 ViewBag.Message = "File Upload Failed";
             }
            
-            return RedirectToAction("index", "file");
-        }
-
-        [HttpPost]
-        public async Task<ActionResult> Process(IFormFile file)
-        {
-            return View();
+            return RedirectToAction("Index", "file");
         }
 
 
-        [HttpPost]
-        public async Task<ActionResult> Download(IFormFile file)
-        {
-            return View();
-        }
-
-
-
-        [NonAction]
-        public static void ConvertXlsxToTxt(string xlsxFilePath, string txtFilePath)
-        {
-            /*Console.WriteLine("Sleep...5s");
-            for (int i = 0; i < 5; i++)
-            {
-                Thread.Sleep(1000);
-                Console.WriteLine(i + 1);
-            }
-            Console.WriteLine("Start...");*/
-            ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-            FileInfo file = new FileInfo(xlsxFilePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(txtFilePath));
-            using (ExcelPackage package = new ExcelPackage(file))
-            {
-                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                int rowCount = worksheet.Dimension.Rows;
-                int colCount = worksheet.Dimension.Columns;
-                using (StreamWriter writer = new StreamWriter(txtFilePath))
-                {
-                    string horizontalLine = new string('-', colCount * 26 + 17);
-                    writer.WriteLine(horizontalLine);
-                    for (int col = 1; col <= colCount; col++)
-                        writer.Write($"| {worksheet.Cells[1, col].Text,-25}");
-                    writer.WriteLine("|");
-                    writer.WriteLine(horizontalLine);
-                    for (int row = 2; row <= rowCount; row++)
-                    {
-                        for (int col = 1; col <= colCount; col++)
-                            writer.Write($"| {worksheet.Cells[row, col].Text,-25}");
-                        writer.WriteLine("|");
-                    }
-
-                    writer.WriteLine(horizontalLine);
-                }
-            }
-            Console.WriteLine("Stop...");
-        }
-
-
+  
         [NonAction]
         private static void MeasureTime(Action action)
         {
@@ -162,24 +157,5 @@ namespace WebApp.Controllers
             long elapsedTimeMilliseconds = stopwatch.ElapsedMilliseconds;
             Console.WriteLine($"Elapsed Time: {elapsedTimeMilliseconds} ms");
         }
-
-        /*public async Task<ActionResult> Upload(IFormFile file)
-        {
-            try
-            {
-                if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name))
-                    ViewBag.Message = "File Upload Successful";
-                else
-                    ViewBag.Message = "File Upload Failed";
-            }
-            catch (Exception ex)
-            {
-                ViewBag.Message = "File Upload Failed";
-            }
-            return View();
-        }*/
-
-
-
     }
 }
