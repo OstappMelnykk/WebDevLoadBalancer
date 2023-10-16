@@ -102,20 +102,107 @@ namespace WebApp.Controllers
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
         [NonAction]
+        private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            FileInfo file = new FileInfo(xlsxFilePath);
+            string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
+            string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
+
+            Directory.CreateDirectory(txtFilePath);
+
+            using (ExcelPackage package = new ExcelPackage(file))
+            {
+                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+                int rowCount = worksheet.Dimension.Rows;
+                int colCount = worksheet.Dimension.Columns;
+
+
+
+
+                int[] columnWidths = new int[colCount]; // Додайте це тут для обчислення ширини стовбців
+
+                for (int col = 1; col <= colCount; col++)
+                {
+                    int maxColumnWidth = 0;
+                    for (int row = 1; row <= rowCount; row++)
+                    {
+                        int cellWidth = worksheet.Cells[row, col].Text.Length;
+                        if (cellWidth > maxColumnWidth)
+                        {
+                            maxColumnWidth = cellWidth;
+                        }
+                    }
+                    columnWidths[col - 1] = maxColumnWidth;
+                }
+
+
+
+
+                int maxLineWidth = 0;
+                for (int col = 0; col < colCount; col++)
+                {
+                    maxLineWidth += columnWidths[col] + 4; // +4 для роздільних ліній і відступів
+                }
+
+                string horizontalLine = new string('-', maxLineWidth);
+
+                /*string horizontalLine = new string('-', colCount * 26 + 17);*/
+
+                using (StreamWriter writer = new StreamWriter(Path.Combine(txtFilePath, $"{newFileName}.txt")))
+                {
+                    writer.WriteLine(horizontalLine);
+
+                    for (int col = 1; col <= colCount; col++)
+                    {
+                        int a = -(columnWidths[col - 1] + 2);
+                        writer.Write(string.Format("| {0," + a + "}", worksheet.Cells[1, col].Text));
+                    }
+                    writer.WriteLine("|");
+                    writer.WriteLine(horizontalLine);
+
+                    for (int row = 2; row <= rowCount; row++)
+                    {
+                        for (int col = 1; col <= colCount; col++)
+                        {
+                            int a = -(columnWidths[col - 1] + 2);
+                            writer.Write(string.Format("| {0," + a + "}", worksheet.Cells[row, col].Text));
+
+                        }
+                        writer.WriteLine("|");
+                    }
+
+                    writer.WriteLine(horizontalLine);
+                }
+
+
+            }
+
+
+
+            FileAlreadyConverted fileModel = new FileAlreadyConverted()
+            {
+                FileName = $"{newFileName}.txt",
+                PathToFolder = txtFilePath,
+                FullPathToFile = txtFilePath + "\\" + $"{newFileName}.txt",
+            };
+            db.FilesAlreadyConverted.Add(fileModel);
+            db.SaveChanges();
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+        /*[NonAction]
         private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -139,6 +226,7 @@ namespace WebApp.Controllers
 
                     for (int col = 1; col <= colCount; col++)
                         writer.Write($"| {worksheet.Cells[1, col].Text,-25}");
+                        //writer.Write($"| {worksheet.Cells[1, col].Text,-25}");
 
                     writer.WriteLine("|");
                     writer.WriteLine(horizontalLine);
@@ -147,6 +235,7 @@ namespace WebApp.Controllers
                     {
                         for (int col = 1; col <= colCount; col++)
                             writer.Write($"| {worksheet.Cells[row, col].Text,-25}");
+                            //writer.Write($"| {worksheet.Cells[row, col].Text,-25}");
 
                         writer.WriteLine("|");
                     }
@@ -165,13 +254,13 @@ namespace WebApp.Controllers
             };
             db.FilesAlreadyConverted.Add(fileModel);
             db.SaveChanges();
-        }
+        }*/
 
 
         /*[RequestFormLimits(MultipartBodyLengthLimit = 1048576000)] // 1000 MB
         [RequestSizeLimit(1048576000)] // 1000 MB*/
-                                       
-                                       
+
+
         [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
         [RequestSizeLimit(209715200)] // 200 MB
         [HttpPost]
@@ -203,3 +292,14 @@ namespace WebApp.Controllers
         
     }
 }
+
+
+
+/*select* from public."AspNetUsers";
+select* from public."FilesAlreadyConverted";
+select* from public."FilesToConvet";
+
+
+delete from public."AspNetUsers";
+delete from public."FilesAlreadyConverted";
+delete from public."FilesToConvet";*/

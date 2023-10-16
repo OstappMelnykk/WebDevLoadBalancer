@@ -7,11 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="ConvertedFiles\" />
+    <Compile Remove="ConvertedFiles\**" />
+    <Compile Remove="wwwroot\FileStore\**" />
+    <Content Remove="ConvertedFiles\**" />
+    <Content Remove="wwwroot\FileStore\**" />
+    <EmbeddedResource Remove="ConvertedFiles\**" />
+    <EmbeddedResource Remove="wwwroot\FileStore\**" />
+    <None Remove="ConvertedFiles\**" />
+    <None Remove="wwwroot\FileStore\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="wwwroot\css\File\" />
     <Folder Include="wwwroot\css\Home\" />
     <Folder Include="wwwroot\js\" />
-    <Folder Include="wwwroot\FileStore\" />
   </ItemGroup>
 
   <ItemGroup>
