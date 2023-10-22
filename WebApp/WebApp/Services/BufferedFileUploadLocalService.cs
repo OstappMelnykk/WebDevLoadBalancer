@@ -31,13 +31,13 @@ namespace WebApp.Services
                         await file.CopyToAsync(fileStream);
 
 
-                        FileToConvetModel fileModel = new FileToConvetModel()
+                        FileToConvert fileModel = new FileToConvert()
                         {
                             FileName = $"{i}--{file.FileName}",
                             PathToFolder = path,
                             FullPathToFile = path + "\\" + $"{i}--{file.FileName}",
                         };
-                        context.FilesToConvet.AddRange(fileModel);
+                        context.FilesToConvert.AddRange(fileModel);
                         context.SaveChanges();
 
 

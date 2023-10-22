@@ -2,7 +2,7 @@
 
 namespace WebApp.Models
 {
-    public class FileAlreadyConverted
+    public class FileToConvert
     {
         [Key]
         public int Id { get; set; }

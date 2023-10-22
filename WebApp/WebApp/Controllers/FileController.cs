@@ -30,8 +30,8 @@ namespace WebApp.Controllers
 
         public IActionResult Index()
         {
-            ViewBag.DBFilesToConvet = db.FilesToConvet.ToList();
-            ViewBag.DBFilesAlreadyConverted = db.FilesAlreadyConverted.ToList();
+            ViewBag.DBFilesToConvet = db.FilesToConvert.ToList();
+            ViewBag.DBFilesAlreadyConverted = db.ConvertedFiles.ToList();
 
             return View();
         }
@@ -39,7 +39,7 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Process()
         {
-            var files = db.FilesToConvet.ToList();
+            var files = db.FilesToConvert.ToList();
 
 
 
@@ -181,13 +181,13 @@ namespace WebApp.Controllers
 
 
 
-            FileAlreadyConverted fileModel = new FileAlreadyConverted()
+            ConvertedFile fileModel = new ConvertedFile()
             {
                 FileName = $"{newFileName}.txt",
                 PathToFolder = txtFilePath,
                 FullPathToFile = txtFilePath + "\\" + $"{newFileName}.txt",
             };
-            db.FilesAlreadyConverted.Add(fileModel);
+            db.ConvertedFiles.Add(fileModel);
             db.SaveChanges();
         }
 
