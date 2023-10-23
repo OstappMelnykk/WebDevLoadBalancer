@@ -30,19 +30,78 @@ Process
 }
 
 
+
+<style>
+    .li_container{
+        background-color: grey;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .content{
+        margin-right: 20px;
+    }
+</style>
+
+
+
+<form asp-controller="File" asp-action="Delete_All_Uploaded" method="post" enctype="multipart/form-data">
+    <button type="submit"><h1>Delete_All_Uploaded</h1></button>
+</form>
 <ul>
-    @foreach (var item in ViewBag.DBFilesToConvet)
+    @if (ViewBag.DBFilesToConvert != null)
     {
-            <li>@item.Title</li>
-    }   
+        @foreach (var item in ViewBag.DBFilesToConvert)
+        {
+            <li>
+                <div class="li_container">
+                    <div class="content"><h2>@item.Title</h2></div>
+
+                    <div class="itemContainer">
+                        <form asp-controller="File" asp-action="DeleteUploaded" asp-route-fullpath="@item.FullPath" method="post" enctype="multipart/form-data">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </div>
+                </div> 
+
+            </li>
+            
+        }   
+    }
+   
 </ul 
 
 
 <h1>===============================================</h1>
 
+
+<br />
+<form asp-controller="File" asp-action="Delete_All_Converted" method="post" enctype="multipart/form-data">
+    <button type="submit"><h1>Delete_All_Converted</h1></button>
+</form>
 <ul>
-    @foreach (var item in ViewBag.DBFilesAlreadyConverted)
+    @if (ViewBag.DBConvertedFiles != null)
     {
-            <li>@item.Title</li>
-    }   
+        @foreach (var item in ViewBag.DBConvertedFiles)
+        {
+            <li>
+                <div class="li_container">
+                    <div class="content"><h2>@item.Title</h2></div>
+
+                    <div class="itemContainer">
+                        <form asp-controller="File" asp-action="DeleteConverted" asp-route-fullpath="@item.FullPath" method="post" enctype="multipart/form-data">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </div>
+                    <div class="itemContainer">
+                        <form asp-controller="File" asp-action="Download" asp-route-fullpath="@item.FullPath" asp-route-title="@item.Title" method="post" enctype="multipart/form-data">
+                            <button type="submit">Download</button>
+                        </form>
+                    </div>
+                </div> 
+            </li>      
+        }  
+    }
+     
 </ul 

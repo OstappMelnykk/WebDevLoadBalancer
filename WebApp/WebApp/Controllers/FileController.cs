@@ -23,23 +23,113 @@ namespace WebApp.Controllers
             db = context;
         }
 
-        
+       
 
-        /*public IActionResult Index() => View(db.FilesToConvet.ToList());*/
 
 
         public IActionResult Index()
         {
-            ViewBag.DBFilesToConvet = db.FilesToConvert.ToList();
-            ViewBag.DBFilesAlreadyConverted = db.ConvertedFiles.ToList();
+            ViewBag.DBFilesToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+            ViewBag.DBConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
+
 
             return View();
         }
 
+
+        /*[HttpGet("download")]*/
+        [HttpPost]
+        public async Task<ActionResult> Download(string fullpath, string title)
+        {
+
+            string filePath = fullpath;
+            string fileName = title;
+
+            // Return the file for download.
+            return File(System.IO.File.OpenRead(filePath), "text/plain", fileName);
+
+            
+        }
+
+
+
+        [HttpPost]
+        public async Task<ActionResult> DeleteConverted(string fullpath)
+        {
+
+            db.DeleteConvertedFilesByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
+            if (System.IO.File.Exists(fullpath)){
+                try{System.IO.File.Delete(fullpath);}
+                catch (Exception e){}
+            }
+
+            return RedirectToAction("Index", "file");
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> DeleteUploaded(string fullpath)
+        {
+            db.DeleteFilesToConvertByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
+            if (System.IO.File.Exists(fullpath))
+            {
+                try { System.IO.File.Delete(fullpath); }
+                catch (Exception e) { }
+            }
+            return RedirectToAction("Index", "file");
+        }
+
+
+
+        [HttpPost]
+        public async Task<ActionResult> Delete_All_Converted()
+        {
+            
+
+            var DBConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
+
+            foreach (var item in DBConvertedFiles)
+            {
+                string fullpath = item.FullPath;
+                if (System.IO.File.Exists(fullpath))
+                {
+                    try { System.IO.File.Delete(fullpath); }
+                    catch (Exception e) { }
+                }
+            }
+
+            db.DeleteConvertedFilesByUserName(User.Identity.Name.ToString());
+            
+
+            return RedirectToAction("Index", "file");
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Delete_All_Uploaded()
+        {
+            var DBFilesToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();          
+            foreach (var item in DBFilesToConvert)
+            {
+                string fullpath = item.FullPath;
+                if (System.IO.File.Exists(fullpath))
+                {
+                    try { System.IO.File.Delete(fullpath); }
+                    catch (Exception e) { }
+                }
+            }
+            db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+            
+            return RedirectToAction("Index", "file");
+        }
+
+
+
+
+
+
         [HttpPost]
         public async Task<ActionResult> Process()
         {
-            var files = db.FilesToConvert.ToList();
+            var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
 
 
 
@@ -67,7 +157,7 @@ namespace WebApp.Controllers
                     }
                 }
 
-                db.DeleteFromFilesToConvert();
+                /*db.DeleteFromFilesToConvert();*/
 
 
 
@@ -180,15 +270,24 @@ namespace WebApp.Controllers
             }
 
 
+            User user = db.Users.SingleOrDefault(u => u.UserName == User.Identity.Name);
 
             ConvertedFile fileModel = new ConvertedFile()
             {
                 Title = $"{newFileName}.txt",
                 Path = txtFilePath,
                 FullPath = txtFilePath + "\\" + $"{newFileName}.txt",
+                UserName = User.Identity.Name.ToString(),
+                UserId = user.Id,
+                User = user
             };
+
             db.ConvertedFiles.Add(fileModel);
-            db.SaveChanges();
+            db.SaveChanges(); // Save changes after adding the fileModel
+            db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+
+
+
         }
 
 

@@ -12,7 +12,7 @@ namespace WebApp.Services
     public class BufferedFileUploadLocalService : IBufferedFileUploadService
     {
         private static int i = 1;
-        public async Task<bool> UploadFile(IFormFile file, dynamic UserName, ApplicationContext context)
+        public async Task<bool> UploadFile(IFormFile file, object UserName, ApplicationContext context)
         {
             string path = "";
 
@@ -22,7 +22,7 @@ namespace WebApp.Services
                 if (file.Length > 0)
                 {
 
-                    path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, $"UploadedFiles/{UserName}"));
+                    path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, $"UploadedFiles/{UserName.ToString()}"));
 
                     if (!Directory.Exists(path)) Directory.CreateDirectory(path);
 
@@ -30,12 +30,15 @@ namespace WebApp.Services
                     {
                         await file.CopyToAsync(fileStream);
 
-
+                        User user = context.Users.SingleOrDefault(u => u.UserName == UserName.ToString());
                         FileToConvert fileModel = new FileToConvert()
                         {
                             Title = $"{i}--{file.FileName}",
                             Path = path,
                             FullPath = path + "\\" + $"{i}--{file.FileName}",
+                            UserName = UserName.ToString(),
+                            UserId = user.Id.ToString(),
+                            User = user // Set the User navigation property
                         };
                         context.FilesToConvert.AddRange(fileModel);
                         context.SaveChanges();

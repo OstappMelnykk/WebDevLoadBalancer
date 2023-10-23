@@ -15,14 +15,46 @@ namespace WebApp.Models
 			Database.EnsureCreated();
 		}
 
-        public void DeleteFromFilesToConvert()
+
+        public void DeleteFilesToConvertByUserName(string UserName)
         {
-            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesToConvert\"");
+            FilesToConvert.RemoveRange(FilesToConvert.Where(f => f.UserName == UserName));
+            SaveChanges();
         }
 
-        public void DeleteFromConvertedFiles()
+        public void DeleteConvertedFilesByUserName(string UserName)
         {
-            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"ConvertedFiles\"");
+            ConvertedFiles.RemoveRange(ConvertedFiles.Where(f => f.UserName == UserName));
+            SaveChanges();
+        }
+
+
+
+        public void DeleteFilesToConvertByUserNameAndFullPath(string UserName, string FullPath)
+        {
+            FilesToConvert.RemoveRange(FilesToConvert.Where(f => f.UserName == UserName && f.FullPath == FullPath));
+            SaveChanges();
+        }
+        public void DeleteConvertedFilesByUserNameAndFullPath(string UserName, string FullPath)
+        {
+            ConvertedFiles.RemoveRange(ConvertedFiles.Where(f => f.UserName == UserName && f.FullPath == FullPath));
+            SaveChanges();
+        }
+
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<FileToConvert>()
+                .HasOne(f => f.User)
+                .WithMany(u => u.FilesToConvert)
+                .HasForeignKey(f => f.UserId);
+
+            modelBuilder.Entity<ConvertedFile>()
+                .HasOne(f => f.User)
+                .WithMany(u => u.ConvertedFiles)
+                .HasForeignKey(f => f.UserId);
         }
     }
 }
