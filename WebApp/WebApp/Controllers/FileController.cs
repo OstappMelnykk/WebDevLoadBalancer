@@ -23,32 +23,20 @@ namespace WebApp.Controllers
             db = context;
         }
 
-       
-
-
-
         public IActionResult Index()
         {
             ViewBag.DBFilesToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
             ViewBag.DBConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
-
-
             return View();
         }
 
-
-        /*[HttpGet("download")]*/
         [HttpPost]
         public async Task<ActionResult> Download(string fullpath, string title)
         {
-
             string filePath = fullpath;
             string fileName = title;
 
-            // Return the file for download.
-            return File(System.IO.File.OpenRead(filePath), "text/plain", fileName);
-
-            
+            return File(System.IO.File.OpenRead(filePath), "text/plain", fileName);          
         }
 
 
@@ -56,7 +44,6 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> DeleteConverted(string fullpath)
         {
-
             db.DeleteConvertedFilesByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
             if (System.IO.File.Exists(fullpath)){
                 try{System.IO.File.Delete(fullpath);}
@@ -83,8 +70,6 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Delete_All_Converted()
         {
-            
-
             var DBConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
 
             foreach (var item in DBConvertedFiles)
@@ -98,8 +83,7 @@ namespace WebApp.Controllers
             }
 
             db.DeleteConvertedFilesByUserName(User.Identity.Name.ToString());
-            
-
+           
             return RedirectToAction("Index", "file");
         }
 
@@ -121,18 +105,10 @@ namespace WebApp.Controllers
             return RedirectToAction("Index", "file");
         }
 
-
-
-
-
-
         [HttpPost]
         public async Task<ActionResult> Process()
         {
             var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
-
-
-
 
             long elapsedTimeMilliseconds = MeasureTime(() =>
             {
@@ -156,23 +132,11 @@ namespace WebApp.Controllers
                         }
                     }
                 }
-
-                /*db.DeleteFromFilesToConvert();*/
-
-
-
             });
-
-
-
-
-
 
             return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
             //return RedirectToAction("Index", "file");
         }
-
-
 
         [NonAction]
         private long MeasureTime(Action action)
@@ -186,10 +150,6 @@ namespace WebApp.Controllers
             long elapsedTimeMilliseconds = stopwatch.ElapsedMilliseconds;
             return elapsedTimeMilliseconds;
         }
-
-
-
-
 
 
         [NonAction]
@@ -208,10 +168,7 @@ namespace WebApp.Controllers
                 int rowCount = worksheet.Dimension.Rows;
                 int colCount = worksheet.Dimension.Columns;
 
-
-
-
-                int[] columnWidths = new int[colCount]; // Додайте це тут для обчислення ширини стовбців
+                int[] columnWidths = new int[colCount];
 
                 for (int col = 1; col <= colCount; col++)
                 {
@@ -227,18 +184,13 @@ namespace WebApp.Controllers
                     columnWidths[col - 1] = maxColumnWidth;
                 }
 
-
-
-
                 int maxLineWidth = 0;
                 for (int col = 0; col < colCount; col++)
                 {
-                    maxLineWidth += columnWidths[col] + 4; // +4 для роздільних ліній і відступів
+                    maxLineWidth += columnWidths[col] + 4;
                 }
 
                 string horizontalLine = new string('-', maxLineWidth);
-
-                /*string horizontalLine = new string('-', colCount * 26 + 17);*/
 
                 using (StreamWriter writer = new StreamWriter(Path.Combine(txtFilePath, $"{newFileName}.txt")))
                 {
@@ -262,13 +214,9 @@ namespace WebApp.Controllers
                         }
                         writer.WriteLine("|");
                     }
-
                     writer.WriteLine(horizontalLine);
                 }
-
-
             }
-
 
             User user = db.Users.SingleOrDefault(u => u.UserName == User.Identity.Name);
 
@@ -283,81 +231,9 @@ namespace WebApp.Controllers
             };
 
             db.ConvertedFiles.Add(fileModel);
-            db.SaveChanges(); // Save changes after adding the fileModel
+            db.SaveChanges(); 
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
-
-
-
         }
-
-
-
-
-
-
-
-
-
-
-
-
-        /*[NonAction]
-        private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
-        {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            FileInfo file = new FileInfo(xlsxFilePath);
-            string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
-            string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
-            
-            Directory.CreateDirectory(txtFilePath);
-
-            using (ExcelPackage package = new ExcelPackage(file))
-            {
-                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                int rowCount = worksheet.Dimension.Rows;
-                int colCount = worksheet.Dimension.Columns;
-
-                string horizontalLine = new string('-', colCount * 26 + 17);
-
-                using (StreamWriter writer = new StreamWriter(Path.Combine(txtFilePath, $"{newFileName}.txt")))
-                {
-                    writer.WriteLine(horizontalLine);
-
-                    for (int col = 1; col <= colCount; col++)
-                        writer.Write($"| {worksheet.Cells[1, col].Text,-25}");
-                        //writer.Write($"| {worksheet.Cells[1, col].Text,-25}");
-
-                    writer.WriteLine("|");
-                    writer.WriteLine(horizontalLine);
-
-                    for (int row = 2; row <= rowCount; row++)
-                    {
-                        for (int col = 1; col <= colCount; col++)
-                            writer.Write($"| {worksheet.Cells[row, col].Text,-25}");
-                            //writer.Write($"| {worksheet.Cells[row, col].Text,-25}");
-
-                        writer.WriteLine("|");
-                    }
-
-                    writer.WriteLine(horizontalLine);
-                }
-            }
-
-
-
-            FileAlreadyConverted fileModel = new FileAlreadyConverted()
-            {
-                FileName = $"{newFileName}.txt",
-                PathToFolder = txtFilePath,
-                FullPathToFile = txtFilePath + "\\" + $"{newFileName}.txt",
-            };
-            db.FilesAlreadyConverted.Add(fileModel);
-            db.SaveChanges();
-        }*/
-
-
-        /*[RequestFormLimits(MultipartBodyLengthLimit = 1048576000)] // 1000 MB
-        [RequestSizeLimit(1048576000)] // 1000 MB*/
 
 
         [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
@@ -384,21 +260,6 @@ namespace WebApp.Controllers
             }
            
             return RedirectToAction("Index", "file");
-        }
-
-
-  
-        
+        }       
     }
 }
-
-
-
-/*select* from public."AspNetUsers";
-select* from public."FilesAlreadyConverted";
-select* from public."FilesToConvet";
-
-
-delete from public."AspNetUsers";
-delete from public."FilesAlreadyConverted";
-delete from public."FilesToConvet";*/

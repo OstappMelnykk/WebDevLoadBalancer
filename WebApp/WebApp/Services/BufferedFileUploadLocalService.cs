@@ -7,21 +7,16 @@ using WebApp.Models;
 
 namespace WebApp.Services
 {
-
-    //IFormFile file, dynamic UserName, ApplicationContext db, string FolderName
     public class BufferedFileUploadLocalService : IBufferedFileUploadService
     {
         private static int i = 1;
         public async Task<bool> UploadFile(IFormFile file, object UserName, ApplicationContext context)
         {
             string path = "";
-
             try
             {
-
                 if (file.Length > 0)
                 {
-
                     path = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, $"UploadedFiles/{UserName.ToString()}"));
 
                     if (!Directory.Exists(path)) Directory.CreateDirectory(path);
@@ -38,18 +33,15 @@ namespace WebApp.Services
                             FullPath = path + "\\" + $"{i}--{file.FileName}",
                             UserName = UserName.ToString(),
                             UserId = user.Id.ToString(),
-                            User = user // Set the User navigation property
+                            User = user 
                         };
                         context.FilesToConvert.AddRange(fileModel);
                         context.SaveChanges();
 
-
                         i++;
                     }
-
                     return true;
                 }
-
                 else return false;
             }
             catch (Exception ex)

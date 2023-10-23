@@ -1,14 +1,6 @@
-﻿@*@model List<FileToConvetModel>
-*@
-
-
-<h1>Buffered File Upload</h1>
-<a asp-controller="Home" asp-action="index">Home</a>
-<br />
-<a asp-controller="Account" asp-action="Logout">Log off</a>
-<br />
-
-<hr />
+﻿<h1>Buffered File Upload</h1>
+<a asp-controller="Home" asp-action="index">Home</a><br />
+<a asp-controller="Account" asp-action="Logout">Log off</a><br /><hr />
 
 <form asp-controller="File" asp-action="Upload" method="post" enctype="multipart/form-data">
     <input type="file" name="file" />
@@ -30,7 +22,6 @@ Process
 }
 
 
-
 <style>
     .li_container{
         background-color: grey;
@@ -49,6 +40,8 @@ Process
 <form asp-controller="File" asp-action="Delete_All_Uploaded" method="post" enctype="multipart/form-data">
     <button type="submit"><h1>Delete_All_Uploaded</h1></button>
 </form>
+
+
 <ul>
     @if (ViewBag.DBFilesToConvert != null)
     {
@@ -64,22 +57,21 @@ Process
                         </form>
                     </div>
                 </div> 
-
-            </li>
-            
+            </li>     
         }   
     }
-   
-</ul 
+</ul> 
 
 
 <h1>===============================================</h1>
-
-
 <br />
+
+
 <form asp-controller="File" asp-action="Delete_All_Converted" method="post" enctype="multipart/form-data">
     <button type="submit"><h1>Delete_All_Converted</h1></button>
 </form>
+
+
 <ul>
     @if (ViewBag.DBConvertedFiles != null)
     {
@@ -102,6 +94,5 @@ Process
                 </div> 
             </li>      
         }  
-    }
-     
-</ul 
+    } 
+</ul> 

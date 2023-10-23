@@ -15,7 +15,6 @@ namespace WebApp.Models
 			Database.EnsureCreated();
 		}
 
-
         public void DeleteFilesToConvertByUserName(string UserName)
         {
             FilesToConvert.RemoveRange(FilesToConvert.Where(f => f.UserName == UserName));
@@ -28,8 +27,6 @@ namespace WebApp.Models
             SaveChanges();
         }
 
-
-
         public void DeleteFilesToConvertByUserNameAndFullPath(string UserName, string FullPath)
         {
             FilesToConvert.RemoveRange(FilesToConvert.Where(f => f.UserName == UserName && f.FullPath == FullPath));
@@ -40,7 +37,6 @@ namespace WebApp.Models
             ConvertedFiles.RemoveRange(ConvertedFiles.Where(f => f.UserName == UserName && f.FullPath == FullPath));
             SaveChanges();
         }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

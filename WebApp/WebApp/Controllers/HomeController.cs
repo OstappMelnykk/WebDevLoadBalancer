@@ -15,12 +15,8 @@ namespace WebApp.Controllers
             db = context;
         }
 
-
-
         public IActionResult Index()
         {
-            /*db.DeleteFromFilesToConvert();
-            db.DeleteFromConvertedFiles();*/
             ViewBag.Name = User.Identity.Name;
             ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
             return View();
