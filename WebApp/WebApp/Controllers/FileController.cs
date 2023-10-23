@@ -49,9 +49,9 @@ namespace WebApp.Controllers
 
                 foreach (var item in files)
                 {
-                    string filePath = item.FullPathToFile;
+                    string filePath = item.FullPath;
 
-                    ConvertXlsxToTxt(filePath, item.FileName.Split(".")[0], db);
+                    ConvertXlsxToTxt(filePath, item.Title.Split(".")[0], db);
 
 
                     if (System.IO.File.Exists(filePath))
@@ -67,7 +67,7 @@ namespace WebApp.Controllers
                     }
                 }
 
-                db.DeleteFromFilesToConvet();
+                db.DeleteFromFilesToConvert();
 
 
 
@@ -183,9 +183,9 @@ namespace WebApp.Controllers
 
             ConvertedFile fileModel = new ConvertedFile()
             {
-                FileName = $"{newFileName}.txt",
-                PathToFolder = txtFilePath,
-                FullPathToFile = txtFilePath + "\\" + $"{newFileName}.txt",
+                Title = $"{newFileName}.txt",
+                Path = txtFilePath,
+                FullPath = txtFilePath + "\\" + $"{newFileName}.txt",
             };
             db.ConvertedFiles.Add(fileModel);
             db.SaveChanges();

@@ -33,9 +33,9 @@ namespace WebApp.Services
 
                         FileToConvert fileModel = new FileToConvert()
                         {
-                            FileName = $"{i}--{file.FileName}",
-                            PathToFolder = path,
-                            FullPathToFile = path + "\\" + $"{i}--{file.FileName}",
+                            Title = $"{i}--{file.FileName}",
+                            Path = path,
+                            FullPath = path + "\\" + $"{i}--{file.FileName}",
                         };
                         context.FilesToConvert.AddRange(fileModel);
                         context.SaveChanges();

@@ -7,10 +7,10 @@ namespace WebApp.Models
         [Key]
         public int Id { get; set; }
         [Required]
-        public string FileName { get; set; }
+        public string Title { get; set; }
         [Required]
-        public string PathToFolder { get; set; }
+        public string Path { get; set; }
         [Required]
-        public string FullPathToFile { get; set; }
+        public string FullPath { get; set; }
     }
 }

@@ -15,14 +15,14 @@ namespace WebApp.Models
 			Database.EnsureCreated();
 		}
 
-        public void DeleteFromFilesToConvet()
+        public void DeleteFromFilesToConvert()
         {
-            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesToConvet\"");
+            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesToConvert\"");
         }
 
-        public void DeleteFromFilesAlreadyConverted()
+        public void DeleteFromConvertedFiles()
         {
-            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"FilesAlreadyConverted\"");
+            Database.ExecuteSqlRaw("DELETE FROM PUBLIC.\"ConvertedFiles\"");
         }
     }
 }

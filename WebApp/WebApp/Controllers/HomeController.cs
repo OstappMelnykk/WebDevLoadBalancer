@@ -19,8 +19,8 @@ namespace WebApp.Controllers
 
         public IActionResult Index()
         {
-            db.DeleteFromFilesToConvet();
-            db.DeleteFromFilesAlreadyConverted();
+            db.DeleteFromFilesToConvert();
+            db.DeleteFromConvertedFiles();
             ViewBag.Name = User.Identity.Name;
             ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
             return View();
