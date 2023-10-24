@@ -16,6 +16,19 @@ namespace WebApp.Services
             _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         }
 
+
+        public async Task UploadFileToBlobStorage(string fileName, string filePath)
+        {
+            BlobClient blobClient = _containerClient.GetBlobClient(fileName);
+            using (FileStream stream = System.IO.File.OpenRead(filePath))
+            {
+                await blobClient.UploadAsync(stream, true);
+            }
+        }
+
+
+
+
         public async Task<string> UploadFileAsync(IFormFile file, string userName, ApplicationContext context)
         {
             if (file.Length > 0)

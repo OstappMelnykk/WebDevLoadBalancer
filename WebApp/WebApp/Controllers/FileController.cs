@@ -180,46 +180,34 @@ namespace WebApp.Controllers
             Directory.CreateDirectory(txtFilePath);
 
             WriteToTxtFile(worksheet, columnWidths, txtFilePath, newFileName);
+
+
+            _azureBlobStorageService.UploadFileToBlobStorage($"{newFileName}.txt", Path.Combine(txtFilePath, $"{newFileName}.txt"));
+
+           
             SaveFileToDatabase(db, newFileName, txtFilePath);
 
             package.Dispose();
         }
-        /*
-                [NonAction]
-                private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
-                {
-                    ExcelPackage package = GetExcelPackage(xlsxFilePath);
-                    ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                    int[] columnWidths = CalculateColumnWidths(worksheet);
-
-                    string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
-                    string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
-                    Directory.CreateDirectory(txtFilePath);
-
-                    WriteToTxtFile(worksheet, columnWidths, txtFilePath, newFileName);
 
 
-                    string connectionString = "DefaultEndpointsProtocol=https;AccountName=webdevblobstorage111;AccountKey=34UT1RhvVbZySCEFwnvUjB6QWytyioSSE2dM3X5XPPS/riC1AhzmmckT+hlCRLn4JRCwAynDQY+4+AStSDlBmg==;EndpointSuffix=core.windows.net";
-                    BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+        /* [NonAction]
+         private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
+         {
+             ExcelPackage package = GetExcelPackage(xlsxFilePath);
+             ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+             int[] columnWidths = CalculateColumnWidths(worksheet);
 
-                    // Отримайте посилання на контейнер, в якому ви хочете зберегти TXT файл.
-                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient("webdev");
-                    containerClient.CreateIfNotExists();
+             string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
+             string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
+             Directory.CreateDirectory(txtFilePath);
 
-                    // Створіть BlobClient для TXT файлу та завантажте його.
-                    BlobClient blobClient = containerClient.GetBlobClient($"{newFileName}.txt");
-                    using (FileStream stream = System.IO.File.OpenRead(Path.Combine(txtFilePath, $"{newFileName}.txt")))
-                    {
-                        blobClient.Upload(stream, true);
-                    }
+             WriteToTxtFile(worksheet, columnWidths, txtFilePath, newFileName);
+             SaveFileToDatabase(db, newFileName, txtFilePath);
 
+             package.Dispose();
+         }*/
 
-
-
-                    SaveFileToDatabase(db, newFileName, txtFilePath);
-
-                    package.Dispose();
-                }*/
 
 
 
