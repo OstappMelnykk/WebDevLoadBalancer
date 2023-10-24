@@ -1,3 +1,4 @@
+using Aspose.Cells.Charts;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ namespace WebApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddTransient<IAzureBlobStorageService, AzureBlobStorageService>();
 
             #region Add service for uploading file
             builder.Services.AddTransient<IBufferedFileUploadService, BufferedFileUploadLocalService>();

@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspose.Cells" Version="23.10.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.18.0" />
     <PackageReference Include="EPPlus" Version="6.2.10" />
     <PackageReference Include="IronPdf" Version="2023.10.3" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.12" />

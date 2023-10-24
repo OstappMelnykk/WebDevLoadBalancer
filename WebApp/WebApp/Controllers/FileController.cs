@@ -15,12 +15,14 @@ namespace WebApp.Controllers
     public class FileController : Controller
     {
         readonly IBufferedFileUploadService _bufferedFileUploadService;
+        private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
 
-        public FileController(ApplicationContext context, IBufferedFileUploadService bufferedFileUploadService)
+        public FileController(ApplicationContext context, IBufferedFileUploadService bufferedFileUploadService, IAzureBlobStorageService azureBlobStorageService)
         {
             _bufferedFileUploadService = bufferedFileUploadService;
             db = context;
+            _azureBlobStorageService = azureBlobStorageService;
         }
 
         public IActionResult Index()
@@ -243,16 +245,17 @@ namespace WebApp.Controllers
         {
             try
             {
-                if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name, db))
+                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync(file, User.Identity.Name, db);
+                if (!string.IsNullOrEmpty(uploadedFileUri))
                 {
                     ViewBag.Message = "File Upload Successful";
-                }                        
+                }
                 else
                 {
                     ViewBag.Message = "File Upload Failed";
                     ViewBag.IsUpload = true;
                 }
-                    
+
             }
             catch (Exception ex)
             {
