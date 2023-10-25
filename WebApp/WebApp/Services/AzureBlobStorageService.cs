@@ -22,6 +22,24 @@ namespace WebApp.Services
         }
 
 
+       /* public async Task DeleteBlobAsync(string filePath)
+        {
+            try{           
+                var blobClient = _containerClient.GetBlobClient(filePath);
+                
+                if (await blobClient.ExistsAsync())
+                    await blobClient.DeleteAsync();
+                else{}
+            }
+            catch (Exception ex){}
+        }*/
+
+
+
+
+
+
+
 
 
         public async Task DeleteBlobAsync(string path)

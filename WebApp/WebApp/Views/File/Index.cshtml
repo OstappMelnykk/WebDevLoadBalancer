@@ -87,7 +87,7 @@ Process
                         </form>
                     </div>
                     <div class="itemContainer">
-                        <form asp-controller="File" asp-action="Download" asp-route-fullpath="@item.FullPath" asp-route-title="@item.Title" method="post" enctype="multipart/form-data">
+                        <form asp-controller="File" asp-action="Download" asp-route-blobPath="@item.FullPath" method="post" enctype="multipart/form-data">
                             <button type="submit">Download</button>
                         </form>
                     </div>

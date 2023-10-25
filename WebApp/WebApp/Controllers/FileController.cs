@@ -1,10 +1,18 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Azure;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Text;
 using WebApp.Interfaces;
 using WebApp.Models;
+using Microsoft.AspNetCore.Mvc;
+using Azure.Storage.Blobs;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace WebApp.Controllers
 {
@@ -38,10 +46,7 @@ namespace WebApp.Controllers
             try
             {
                 string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_FilesToConvert(file, User.Identity.Name, db);
-                if (!string.IsNullOrEmpty(uploadedFileUri))
-                {
-                    ViewBag.Message = "File Upload Successful";
-                }
+                if (!string.IsNullOrEmpty(uploadedFileUri)) ViewBag.Message = "File Upload Successful";
                 else
                 {
                     ViewBag.Message = "File Upload Failed";
@@ -49,33 +54,11 @@ namespace WebApp.Controllers
                 }
 
             }
-            catch (Exception ex)
-            {
-                ViewBag.Message = "File Upload Failed";
-            }
+            catch (Exception ex) { ViewBag.Message = "File Upload Failed"; }
+
 
             return RedirectToAction("Index", "file");
         }
-
-        /*[RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
-        [RequestSizeLimit(209715200)] // 200 MB
-        [HttpPost]
-        public async Task<ActionResult> Upload(IFormFile file)
-        {
-            try
-            {
-                if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name, db)) ViewBag.Message = "File Upload Successful";
-                else
-                {
-                    ViewBag.Message = "File Upload Failed";
-                    ViewBag.IsUpload = true;
-                }
-            }
-            catch (Exception ex) { ViewBag.Message = "File Upload Failed"; }
-            return RedirectToAction("Index", "file");
-        }*/
-
-
 
         [HttpPost]
         public async Task<ActionResult> Process()
@@ -95,19 +78,6 @@ namespace WebApp.Controllers
             }
             return RedirectToAction("Index", "file");
         }
-
-
-
-
-       
-        //Отримання даних із файлу XLSX:
-        /*private ExcelPackage GetExcelPackage(string xlsxFilePath)
-        {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            FileInfo file = new FileInfo(xlsxFilePath);
-            return new ExcelPackage(file);
-        }*/
-
 
 
         //Обчислення ширини стовпців:
@@ -166,26 +136,11 @@ namespace WebApp.Controllers
 
             return textContent.ToString();
         }
-
-
-        /*private void WriteTextToAzureBlob(string textContent, string azureBlobConnectionString, string containerName, string blobName)
-        {
-            blobName = Path.ChangeExtension(blobName, ".txt");
-
-            BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobConnectionString);
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-            BlobClient blobClient = containerClient.GetBlobClient(blobName);
-
-            blobClient.Upload(new MemoryStream(Encoding.UTF8.GetBytes(textContent), true));
-        }*/
-
-
         
 
         [NonAction]
         private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
         {
-            //ExcelPackage package = GetExcelPackage(xlsxFilePath);
             ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath);
             ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
             
@@ -204,54 +159,8 @@ namespace WebApp.Controllers
             }
             catch (Exception ex){}
 
-     
-            //WriteTextToAzureBlob(textContent, azureBlobConnectionString, containerName, $"{ Guid.NewGuid()}txtfile");
-            
-            //SaveFileToDatabase(db, newFileName, txtFilePath);
-
             package.Dispose();
         }
-
-
-        
-
-        //Збереження файлу в базу даних:
-        private void SaveFileToDatabase(ApplicationContext db, string newFileName, string txtFilePath)
-        {
-            User user = db.Users.SingleOrDefault(u => u.UserName == User.Identity.Name);
-
-            AddFileTo_ConvertedFiles_Db(
-                $"{newFileName}.txt",
-                txtFilePath,
-                Path.Combine(txtFilePath, $"{newFileName}.txt"),
-                User.Identity.Name.ToString(),
-                user.Id,
-                user,
-                db
-            );
-        }
-
-
-        /* [NonAction]
-         private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
-         {
-             ExcelPackage package = GetExcelPackage(xlsxFilePath);
-             ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-             int[] columnWidths = CalculateColumnWidths(worksheet);
-
-             string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
-             string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
-             Directory.CreateDirectory(txtFilePath);
-
-             WriteToTxtFile(worksheet, columnWidths, txtFilePath, newFileName);
-             SaveFileToDatabase(db, newFileName, txtFilePath);
-
-             package.Dispose();
-         }*/
-
-
-
-        
 
         [NonAction]
         private void AddFileTo_ConvertedFiles_Db(
@@ -307,24 +216,45 @@ namespace WebApp.Controllers
 
 
 
-        [HttpPost]
+        /*[HttpPost]
         public async Task<ActionResult> Download(string fullpath, string title)
         {
             string filePath = fullpath;
             string fileName = title;
 
             return File(System.IO.File.OpenRead(filePath), "text/plain", fileName);
+        }*/
+
+
+
+
+        [HttpPost]
+        public async Task<ActionResult> Download(string blobPath)
+        {
+            var blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=webdevblobstorage111;AccountKey=34UT1RhvVbZySCEFwnvUjB6QWytyioSSE2dM3X5XPPS/riC1AhzmmckT+hlCRLn4JRCwAynDQY+4+AStSDlBmg==;EndpointSuffix=core.windows.net");
+            var blobContainerClient = blobServiceClient.GetBlobContainerClient("webdev");
+            var blobClient = blobContainerClient.GetBlobClient(blobPath);
+
+            if (!await blobClient.ExistsAsync())
+                return NotFound();
+
+            var response = await blobClient.OpenReadAsync();
+            var content = response;
+            var fileName = Path.GetFileName(blobPath); // Витягуємо ім'я файлу з шляху
+
+            return File(content, "application/octet-stream", fileName);
         }
+
+
+
+
+
 
         [HttpPost]
         public async Task<ActionResult> DeleteConverted(string fullpath)
         {
             db.DeleteConvertedFilesByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
-            if (System.IO.File.Exists(fullpath))
-            {
-                try { System.IO.File.Delete(fullpath); }
-                catch (Exception e) { }
-            }
+            await _azureBlobStorageService.DeleteBlobAsync(fullpath);
 
             return RedirectToAction("Index", "file");
         }
@@ -333,11 +263,7 @@ namespace WebApp.Controllers
         public async Task<ActionResult> DeleteUploaded(string fullpath)
         {
             db.DeleteFilesToConvertByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
-            if (System.IO.File.Exists(fullpath))
-            {
-                try { System.IO.File.Delete(fullpath); }
-                catch (Exception e) { }
-            }
+            await _azureBlobStorageService.DeleteBlobAsync(fullpath);
             return RedirectToAction("Index", "file");
         }
 
@@ -349,11 +275,7 @@ namespace WebApp.Controllers
             foreach (var item in DBConvertedFiles)
             {
                 string fullpath = item.FullPath;
-                if (System.IO.File.Exists(fullpath))
-                {
-                    try { System.IO.File.Delete(fullpath); }
-                    catch (Exception e) { }
-                }
+                await _azureBlobStorageService.DeleteBlobAsync(fullpath);
             }
 
             db.DeleteConvertedFilesByUserName(User.Identity.Name.ToString());
@@ -368,11 +290,7 @@ namespace WebApp.Controllers
             foreach (var item in DBFilesToConvert)
             {
                 string fullpath = item.FullPath;
-                if (System.IO.File.Exists(fullpath))
-                {
-                    try { System.IO.File.Delete(fullpath); }
-                    catch (Exception e) { }
-                }
+                await _azureBlobStorageService.DeleteBlobAsync(fullpath);
             }
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
 
