@@ -18,10 +18,7 @@ namespace WebApp
 
             builder.Services.AddTransient<IAzureBlobStorageService, AzureBlobStorageService>();
 
-            #region Add service for uploading file
-            builder.Services.AddTransient<IBufferedFileUploadService, BufferedFileUploadLocalService>();
-            #endregion
-
+           
             #region Connection to DB
 
 
