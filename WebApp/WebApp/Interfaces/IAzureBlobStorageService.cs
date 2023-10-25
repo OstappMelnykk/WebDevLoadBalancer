@@ -1,10 +1,13 @@
-﻿using WebApp.Models;
+﻿using OfficeOpenXml;
+using WebApp.Models;
 
 namespace WebApp.Interfaces
 {
     public interface IAzureBlobStorageService
     {
-        Task<string> UploadFileAsync(IFormFile file, string userName, ApplicationContext context);
-        Task UploadFileToBlobStorage(string fileName, string filePath);
+        Task<string> UploadFileAsync_TO_FilesToConvert(IFormFile file, string userName, ApplicationContext context);
+        Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context);
+        Task<ExcelPackage> GetExcelPackageFromAzureBlob(string path);
+        Task DeleteBlobAsync(string path);
     }
 }

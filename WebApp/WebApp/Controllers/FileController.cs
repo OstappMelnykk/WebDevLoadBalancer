@@ -1,18 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel;
-using System.Runtime.ConstrainedExecution;
-using WebApp.Interfaces;
-using WebApp.Models;
 using OfficeOpenXml;
 using System.Diagnostics;
-using System.Drawing;
-using LicenseContext = OfficeOpenXml.LicenseContext;
-using Aspose.Cells.Charts;
-using System.ComponentModel.DataAnnotations;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Specialized;
-
+using System.Text;
+using WebApp.Interfaces;
+using WebApp.Models;
 
 namespace WebApp.Controllers
 {
@@ -38,14 +30,40 @@ namespace WebApp.Controllers
         }
 
 
-       
-
         [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
         [RequestSizeLimit(209715200)] // 200 MB
         [HttpPost]
         public async Task<ActionResult> Upload(IFormFile file)
         {
-            try{
+            try
+            {
+                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_FilesToConvert(file, User.Identity.Name, db);
+                if (!string.IsNullOrEmpty(uploadedFileUri))
+                {
+                    ViewBag.Message = "File Upload Successful";
+                }
+                else
+                {
+                    ViewBag.Message = "File Upload Failed";
+                    ViewBag.IsUpload = true;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Message = "File Upload Failed";
+            }
+
+            return RedirectToAction("Index", "file");
+        }
+
+        /*[RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
+        [RequestSizeLimit(209715200)] // 200 MB
+        [HttpPost]
+        public async Task<ActionResult> Upload(IFormFile file)
+        {
+            try
+            {
                 if (await _bufferedFileUploadService.UploadFile(file, User.Identity.Name, db)) ViewBag.Message = "File Upload Successful";
                 else
                 {
@@ -55,7 +73,7 @@ namespace WebApp.Controllers
             }
             catch (Exception ex) { ViewBag.Message = "File Upload Failed"; }
             return RedirectToAction("Index", "file");
-        }
+        }*/
 
 
 
@@ -73,11 +91,7 @@ namespace WebApp.Controllers
 
                 db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
 
-                if (System.IO.File.Exists(filePath))
-                {
-                    try{System.IO.File.Delete(filePath);}
-                    catch (Exception e){}
-                }
+                await _azureBlobStorageService.DeleteBlobAsync(filePath);
             }
             return RedirectToAction("Index", "file");
         }
@@ -87,12 +101,14 @@ namespace WebApp.Controllers
 
        
         //Отримання даних із файлу XLSX:
-        private ExcelPackage GetExcelPackage(string xlsxFilePath)
+        /*private ExcelPackage GetExcelPackage(string xlsxFilePath)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             FileInfo file = new FileInfo(xlsxFilePath);
             return new ExcelPackage(file);
-        }
+        }*/
+
+
 
         //Обчислення ширини стовпців:
         private int[] CalculateColumnWidths(ExcelWorksheet worksheet)
@@ -118,40 +134,87 @@ namespace WebApp.Controllers
             return columnWidths;
         }
 
-        //Форматування та запис в файл TXT:
-        private void WriteToTxtFile(ExcelWorksheet worksheet, int[] columnWidths, string txtFilePath, string newFileName)
+
+        private string ConvertToText(ExcelWorksheet worksheet, int[] columnWidths)
         {
             int rowCount = worksheet.Dimension.Rows;
             int colCount = worksheet.Dimension.Columns;
             int maxLineWidth = columnWidths.Sum() + 4 * colCount;
             string horizontalLine = new string('-', maxLineWidth);
+            StringBuilder textContent = new StringBuilder();
 
+            textContent.AppendLine(horizontalLine);
 
-          
-            using (StreamWriter writer = new StreamWriter(Path.Combine(txtFilePath, $"{newFileName}.txt")))
+            for (int col = 1; col <= colCount; col++)
             {
-                writer.WriteLine(horizontalLine);
+                int a = -(columnWidths[col - 1] + 2);
+                textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[1, col].Text);
+            }
+            textContent.AppendLine("|");
+            textContent.AppendLine(horizontalLine);
 
+            for (int row = 2; row <= rowCount; row++)
+            {
                 for (int col = 1; col <= colCount; col++)
                 {
                     int a = -(columnWidths[col - 1] + 2);
-                    writer.Write(string.Format("| {0," + a + "}", worksheet.Cells[1, col].Text));
+                    textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[row, col].Text);
                 }
-                writer.WriteLine("|");
-                writer.WriteLine(horizontalLine);
-
-                for (int row = 2; row <= rowCount; row++)
-                {
-                    for (int col = 1; col <= colCount; col++)
-                    {
-                        int a = -(columnWidths[col - 1] + 2);
-                        writer.Write(string.Format("| {0," + a + "}", worksheet.Cells[row, col].Text));
-                    }
-                    writer.WriteLine("|");
-                }
-                writer.WriteLine(horizontalLine);
+                textContent.AppendLine("|");
             }
+            textContent.AppendLine(horizontalLine);
+
+            return textContent.ToString();
         }
+
+
+        /*private void WriteTextToAzureBlob(string textContent, string azureBlobConnectionString, string containerName, string blobName)
+        {
+            blobName = Path.ChangeExtension(blobName, ".txt");
+
+            BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobConnectionString);
+            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+            BlobClient blobClient = containerClient.GetBlobClient(blobName);
+
+            blobClient.Upload(new MemoryStream(Encoding.UTF8.GetBytes(textContent), true));
+        }*/
+
+
+        
+
+        [NonAction]
+        private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
+        {
+            //ExcelPackage package = GetExcelPackage(xlsxFilePath);
+            ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath);
+            ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+            
+            string textContent = ConvertToText(worksheet, CalculateColumnWidths(worksheet));
+          
+            try{
+                string[] pathSegments = xlsxFilePath.Split('/'); // Split the path by '/'
+                string fileName = pathSegments[pathSegments.Length - 1].Split('.')[0];
+
+                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, fileName, db);
+                if (!string.IsNullOrEmpty(uploadedFileUri)){ViewBag.Message = "File Upload Successful";}
+                else{
+                    ViewBag.Message = "File Upload Failed";
+                    ViewBag.IsUpload = true;
+                }
+            }
+            catch (Exception ex){}
+
+     
+            //WriteTextToAzureBlob(textContent, azureBlobConnectionString, containerName, $"{ Guid.NewGuid()}txtfile");
+            
+            //SaveFileToDatabase(db, newFileName, txtFilePath);
+
+            package.Dispose();
+        }
+
+
+        
+
         //Збереження файлу в базу даних:
         private void SaveFileToDatabase(ApplicationContext db, string newFileName, string txtFilePath)
         {
@@ -166,28 +229,6 @@ namespace WebApp.Controllers
                 user,
                 db
             );
-        }
-
-        [NonAction]
-        private void ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
-        {
-            ExcelPackage package = GetExcelPackage(xlsxFilePath);
-            ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-            int[] columnWidths = CalculateColumnWidths(worksheet);
-
-            string parentDirectory = Directory.GetParent(xlsxFilePath).FullName;
-            string txtFilePath = Path.Combine(parentDirectory, "ConvertedFiles");
-            Directory.CreateDirectory(txtFilePath);
-
-            WriteToTxtFile(worksheet, columnWidths, txtFilePath, newFileName);
-
-
-            _azureBlobStorageService.UploadFileToBlobStorage($"{newFileName}.txt", Path.Combine(txtFilePath, $"{newFileName}.txt"));
-
-           
-            SaveFileToDatabase(db, newFileName, txtFilePath);
-
-            package.Dispose();
         }
 
 
@@ -210,53 +251,7 @@ namespace WebApp.Controllers
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /*[RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
-        [RequestSizeLimit(209715200)] // 200 MB
-        [HttpPost]
-        public async Task<ActionResult> Upload(IFormFile file)
-        {
-            try
-            {
-                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync(file, User.Identity.Name, db);
-                if (!string.IsNullOrEmpty(uploadedFileUri))
-                {
-                    ViewBag.Message = "File Upload Successful";
-                }
-                else
-                {
-                    ViewBag.Message = "File Upload Failed";
-                    ViewBag.IsUpload = true;
-                }
-
-            }
-            catch (Exception ex)
-            {
-                ViewBag.Message = "File Upload Failed";
-            }
-           
-            return RedirectToAction("Index", "file");
-        }     */
-
-
+        
 
         [NonAction]
         private void AddFileTo_ConvertedFiles_Db(
