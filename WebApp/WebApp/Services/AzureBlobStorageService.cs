@@ -1,7 +1,6 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
 using System.Text;
 using WebApp.Interfaces;
@@ -17,29 +16,10 @@ namespace WebApp.Services
         {
             string connectionString = configuration.GetSection("AzureBlobStorage")["ConnectionString"];
             string containerName = configuration.GetSection("AzureBlobStorage")["ContainerName"];
+
             BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
             _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         }
-
-
-       /* public async Task DeleteBlobAsync(string filePath)
-        {
-            try{           
-                var blobClient = _containerClient.GetBlobClient(filePath);
-                
-                if (await blobClient.ExistsAsync())
-                    await blobClient.DeleteAsync();
-                else{}
-            }
-            catch (Exception ex){}
-        }*/
-
-
-
-
-
-
-
 
 
         public async Task DeleteBlobAsync(string path)
@@ -48,7 +28,6 @@ namespace WebApp.Services
             catch (RequestFailedException ex){}
         }
 
-
         public async Task<ExcelPackage> GetExcelPackageFromAzureBlob(string path)
         {
             BlobClient blobClient = _containerClient.GetBlobClient(path);
@@ -56,14 +35,12 @@ namespace WebApp.Services
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 blobClient.DownloadTo(memoryStream);
-                memoryStream.Position = 0; // Скидаємо позицію потоку на початок
+                memoryStream.Position = 0;
 
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
                 return new ExcelPackage(memoryStream);
             }
         }
-
-
 
         private void AddFileTo_ConvertedFiles_Db(
             string _Title,
@@ -87,10 +64,7 @@ namespace WebApp.Services
             db.ConvertedFiles.Add(fileModel);
             db.SaveChanges();
         }
-
-
-
-        
+   
         private void AddFileTo_FilesToConvert_Db(
             string _Title,
             string _Path,
@@ -114,15 +88,6 @@ namespace WebApp.Services
             db.SaveChanges();
         }
 
-
-
-
-
-
-
-
-
-
         public async Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context)
         {
             string folderPath = $"{userName}/ConvertedFiles/"; 
@@ -135,7 +100,6 @@ namespace WebApp.Services
             AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, userName, user.Id.ToString(), user, context);
             return blobClient.Uri.ToString();
         }
-
 
         public async Task<string> UploadFileAsync_TO_FilesToConvert(IFormFile file, string userName, ApplicationContext context)
         {

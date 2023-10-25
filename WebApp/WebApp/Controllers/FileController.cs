@@ -1,31 +1,22 @@
-﻿using Azure;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
+﻿using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Text;
 using WebApp.Interfaces;
 using WebApp.Models;
-using Microsoft.AspNetCore.Mvc;
-using Azure.Storage.Blobs;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace WebApp.Controllers
 {
     [Authorize]
     public class FileController : Controller
-    {
-        readonly IBufferedFileUploadService _bufferedFileUploadService;
+    {       
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
 
-        public FileController(ApplicationContext context, IBufferedFileUploadService bufferedFileUploadService, IAzureBlobStorageService azureBlobStorageService)
-        {
-            _bufferedFileUploadService = bufferedFileUploadService;
+        public FileController(ApplicationContext context, IAzureBlobStorageService azureBlobStorageService)
+        {       
             db = context;
             _azureBlobStorageService = azureBlobStorageService;
         }
@@ -36,7 +27,6 @@ namespace WebApp.Controllers
             ViewBag.DBConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
             return View();
         }
-
 
         [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
         [RequestSizeLimit(209715200)] // 200 MB
@@ -60,6 +50,8 @@ namespace WebApp.Controllers
             return RedirectToAction("Index", "file");
         }
 
+        #region convertation proccess
+      
         [HttpPost]
         public async Task<ActionResult> Process()
         {
@@ -78,7 +70,6 @@ namespace WebApp.Controllers
             }
             return RedirectToAction("Index", "file");
         }
-
 
         //Обчислення ширини стовпців:
         private int[] CalculateColumnWidths(ExcelWorksheet worksheet)
@@ -100,10 +91,8 @@ namespace WebApp.Controllers
                 }
                 columnWidths[col - 1] = maxColumnWidth;
             }
-
             return columnWidths;
         }
-
 
         private string ConvertToText(ExcelWorksheet worksheet, int[] columnWidths)
         {
@@ -137,7 +126,6 @@ namespace WebApp.Controllers
             return textContent.ToString();
         }
         
-
         [NonAction]
         private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
         {
@@ -147,7 +135,7 @@ namespace WebApp.Controllers
             string textContent = ConvertToText(worksheet, CalculateColumnWidths(worksheet));
           
             try{
-                string[] pathSegments = xlsxFilePath.Split('/'); // Split the path by '/'
+                string[] pathSegments = xlsxFilePath.Split('/'); 
                 string fileName = pathSegments[pathSegments.Length - 1].Split('.')[0];
 
                 string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, fileName, db);
@@ -161,6 +149,10 @@ namespace WebApp.Controllers
 
             package.Dispose();
         }
+
+        #endregion
+
+        #region  Addition files to DB
 
         [NonAction]
         private void AddFileTo_ConvertedFiles_Db(
@@ -212,22 +204,9 @@ namespace WebApp.Controllers
             db.SaveChanges();
         }
 
+        #endregion
 
-
-
-
-        /*[HttpPost]
-        public async Task<ActionResult> Download(string fullpath, string title)
-        {
-            string filePath = fullpath;
-            string fileName = title;
-
-            return File(System.IO.File.OpenRead(filePath), "text/plain", fileName);
-        }*/
-
-
-
-
+        #region cliend Download      
         [HttpPost]
         public async Task<ActionResult> Download(string blobPath)
         {
@@ -240,16 +219,13 @@ namespace WebApp.Controllers
 
             var response = await blobClient.OpenReadAsync();
             var content = response;
-            var fileName = Path.GetFileName(blobPath); // Витягуємо ім'я файлу з шляху
+            var fileName = Path.GetFileName(blobPath);
 
             return File(content, "application/octet-stream", fileName);
         }
+        #endregion
 
-
-
-
-
-
+        #region Delete
         [HttpPost]
         public async Task<ActionResult> DeleteConverted(string fullpath)
         {
@@ -296,9 +272,9 @@ namespace WebApp.Controllers
 
             return RedirectToAction("Index", "file");
         }
+        #endregion
 
-
-
+        #region MeasureTime
 
         [NonAction]
         private long MeasureTime(Action action)
@@ -312,6 +288,6 @@ namespace WebApp.Controllers
             long elapsedTimeMilliseconds = stopwatch.ElapsedMilliseconds;
             return elapsedTimeMilliseconds;
         }
-
+        #endregion
     }
 }
