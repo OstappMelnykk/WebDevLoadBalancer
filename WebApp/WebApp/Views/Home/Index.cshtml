@@ -1,4 +1,8 @@
-﻿<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="User" asp-action="UserMainPage">UserMainPage</a></h3>
+﻿<h1>@ViewData["Scheme"]:// @ViewData["Host"]:@ViewData["Port"]</h1>
+
+
+
+<h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="User" asp-action="UserMainPage">UserMainPage</a></h3>
 <h3>&nbsp;&nbsp;&nbsp;&nbsp;<a asp-controller="Administrator" asp-action="AdministratorMainPage">AdministratorMainPage</a></h3>
 
 @if (User.Identity.IsAuthenticated){

@@ -13,7 +13,10 @@ namespace WebApp.Models
 			: base(options)
 		{
 			Database.EnsureCreated();
-		}
+
+            //"Host=db;Port=5432;Database=WebDevDB;Username=postgres;Password=pass"
+            //"Host=localhost;Port=5432;Database=DB1;Username=postgres;Password=1212"
+        }
 
         public void DeleteFilesToConvertByUserName(string UserName)
         {
