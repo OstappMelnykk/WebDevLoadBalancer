@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="nginx\ssl\" />
     <Folder Include="wwwroot\css\File\" />
     <Folder Include="wwwroot\css\Home\" />
     <Folder Include="wwwroot\js\" />

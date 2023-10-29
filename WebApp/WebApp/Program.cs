@@ -1,5 +1,6 @@
 using Aspose.Cells.Charts;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -58,19 +59,58 @@ namespace WebApp
                                                 x.User.HasClaim(ClaimTypes.Role, "Administrator")));
             });
 
+
+
+
+            builder.Services.AddCookiePolicy(options => { options.MinimumSameSitePolicy = SameSiteMode.Lax; });
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.Cookie.SameSite = SameSiteMode.Lax; // або SameSiteMode.None
+                // Інші налаштування куків тут
+            });
+
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            });
+
+
+
+
+
             #endregion
 
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
+            app.UseForwardedHeaders();
 
             if (!app.Environment.IsDevelopment()){
                 app.UseExceptionHandler("/Home/Error");
-                app.UseHsts();
+
+                //app.UseHsts();
+            }
+            else
+            {
+                app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+
+
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto
+            });
+
+
+
+            //app.UseHttpsRedirection();
             app.UseStaticFiles();
+
             app.UseRouting();
 
             #region Add Authentication & Authorization
@@ -80,9 +120,18 @@ namespace WebApp
 
             #endregion
 
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+            // app.MapControllerRoute(
+            //     name: "default",
+            //     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");             
+            });
+
+
 
             app.Run();
         }

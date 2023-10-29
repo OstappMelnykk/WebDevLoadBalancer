@@ -28,6 +28,7 @@ namespace WebApp.Controllers
             ViewData["Port"] = port;
             ViewData["Scheme"] = scheme;
 
+            ViewData["HostName"] = Environment.MachineName;
             return View();
         }
 
