@@ -1,4 +1,5 @@
-﻿using Azure.Storage.Blobs;
+﻿using Aspose.Cells.Charts;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
@@ -57,19 +58,40 @@ namespace WebApp.Controllers
         {
             var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
 
-            foreach (var item in files)
+            long elapsedTimeMilliseconds = MeasureTime(async () =>
             {
-                string filePath = item.FullPath;
-                string Title = item.Title.Split(".")[0];
+                foreach (var item in files)
+                {
+                    string filePath = item.FullPath;
+                    string Title = item.Title.Split(".")[0];
 
-                ConvertXlsxToTxt(filePath, Title, db);
+                    ConvertXlsxToTxt(filePath, Title, db);
 
-                db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
 
-                await _azureBlobStorageService.DeleteBlobAsync(filePath);
-            }
-            return RedirectToAction("Index", "file");
+
+
+                    string folderPath = $"{User.Identity.Name}/ConvertedFiles/";
+                    string fileName = $"{Title}.txt";
+
+                
+
+                    User user = db.Users.SingleOrDefault(u => u.UserName == User.Identity.Name.ToString());
+
+                    AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, User.Identity.Name.ToString(), user.Id.ToString(), user, db);
+
+
+
+
+
+                    db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+
+                    await _azureBlobStorageService.DeleteBlobAsync(filePath);
+                }
+            });
+            return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
+            //return RedirectToAction("Index", "file");
         }
+
 
         //Обчислення ширини стовпців:
         private int[] CalculateColumnWidths(ExcelWorksheet worksheet)
@@ -135,10 +157,10 @@ namespace WebApp.Controllers
             string textContent = ConvertToText(worksheet, CalculateColumnWidths(worksheet));
           
             try{
-                string[] pathSegments = xlsxFilePath.Split('/'); 
-                string fileName = pathSegments[pathSegments.Length - 1].Split('.')[0];
+                //string[] pathSegments = xlsxFilePath.Split('/'); 
+                //string fileName = pathSegments[pathSegments.Length - 1].Split('.')[0];
 
-                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, fileName, db);
+                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
                 if (!string.IsNullOrEmpty(uploadedFileUri)){ViewBag.Message = "File Upload Successful";}
                 else{
                     ViewBag.Message = "File Upload Failed";
