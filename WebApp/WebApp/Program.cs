@@ -17,6 +17,11 @@ namespace WebApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
+
+
+            builder.Services.AddSignalR();
+
+
             builder.Services.AddTransient<IAzureBlobStorageService, AzureBlobStorageService>();
 
            
@@ -126,6 +131,7 @@ namespace WebApp
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapHub<ProgressHub>("/progressHub");
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");             

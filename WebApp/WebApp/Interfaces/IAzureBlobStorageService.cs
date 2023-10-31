@@ -1,4 +1,5 @@
-﻿using OfficeOpenXml;
+﻿using Microsoft.AspNetCore.SignalR;
+using OfficeOpenXml;
 using WebApp.Models;
 
 namespace WebApp.Interfaces
@@ -9,5 +10,6 @@ namespace WebApp.Interfaces
         Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context);
         Task<ExcelPackage> GetExcelPackageFromAzureBlob(string path);
         Task DeleteBlobAsync(string path);
+        //Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context, IHubContext<ProgressHub> _hubContext);
     }
 }

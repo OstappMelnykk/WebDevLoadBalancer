@@ -2,7 +2,10 @@
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System;
 using System.Diagnostics;
 using System.Text;
 using WebApp.Interfaces;
@@ -15,11 +18,15 @@ namespace WebApp.Controllers
     {       
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
+        private readonly IHubContext<ProgressHub> _hubContext;
 
-        public FileController(ApplicationContext context, IAzureBlobStorageService azureBlobStorageService)
+
+        public FileController(ApplicationContext context, IAzureBlobStorageService azureBlobStorageService,
+            IHubContext<ProgressHub> hubContext)
         {       
             db = context;
             _azureBlobStorageService = azureBlobStorageService;
+            _hubContext = hubContext;
         }
 
         public IActionResult Index()
@@ -52,45 +59,50 @@ namespace WebApp.Controllers
         }
 
         #region convertation proccess
-      
+
+        
+
+
+
         [HttpPost]
         public async Task<ActionResult> Process()
         {
-            var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
-
-            long elapsedTimeMilliseconds = MeasureTime(async () =>
+            /*long elapsedTimeMilliseconds = MeasureTime(async () =>
             {
-                foreach (var item in files)
-                {
-                    string filePath = item.FullPath;
-                    string Title = item.Title.Split(".")[0];
-
-                    ConvertXlsxToTxt(filePath, Title, db);
-
-
-
-
-                    string folderPath = $"{User.Identity.Name}/ConvertedFiles/";
-                    string fileName = $"{Title}.txt";
-
                 
+            });*/
 
-                    User user = db.Users.SingleOrDefault(u => u.UserName == User.Identity.Name.ToString());
+            var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+            string _UserName = User.Identity.Name;
 
-                    AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, User.Identity.Name.ToString(), user.Id.ToString(), user, db);
-
-
-
+            int numberOfFiles = files.Count();
 
 
-                    db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+            int i = 0;
+            foreach (var item in files)
+            {
+                //await _hubContext.Clients.All.SendAsync("ReceiveProgress", (i / numberOfFiles) * 100);
 
-                    await _azureBlobStorageService.DeleteBlobAsync(filePath);
-                }
-            });
-            return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
-            //return RedirectToAction("Index", "file");
+                string filePath = item.FullPath;
+                string Title = item.Title.Split(".")[0];
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 2);
+                await ConvertXlsxToTxt(filePath, Title, db);
+
+                string folderPath = $"{_UserName}/ConvertedFiles/";
+                string fileName = $"{Title}.txt";
+                User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
+                AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
+                await _azureBlobStorageService.DeleteBlobAsync(filePath);
+                i++;
+            }
+
+            db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 100);
+            //return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
+            return RedirectToAction("Index", "file");
         }
+
+       
 
 
         //Обчислення ширини стовпців:
@@ -116,8 +128,10 @@ namespace WebApp.Controllers
             return columnWidths;
         }
 
-        private string ConvertToText(ExcelWorksheet worksheet, int[] columnWidths)
+        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths)
         {
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10);
+
             int rowCount = worksheet.Dimension.Rows;
             int colCount = worksheet.Dimension.Columns;
             int maxLineWidth = columnWidths.Sum() + 4 * colCount;
@@ -134,6 +148,12 @@ namespace WebApp.Controllers
             textContent.AppendLine("|");
             textContent.AppendLine(horizontalLine);
 
+
+            double progressStep = 80.0 / (rowCount - 1); // Обчислюємо крок для досягнення 90% з 10% за весь рядок
+
+            double progress = 10; // Початковий прогрес
+
+
             for (int row = 2; row <= rowCount; row++)
             {
                 for (int col = 1; col <= colCount; col++)
@@ -142,34 +162,48 @@ namespace WebApp.Controllers
                     textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[row, col].Text);
                 }
                 textContent.AppendLine("|");
+
+
+                progress += progressStep; // Оновлення прогресу на кожному кроці       
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", Math.Round(progress, 2));
+
             }
             textContent.AppendLine(horizontalLine);
 
+           
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90);
+
             return textContent.ToString();
         }
-        
+
+
         [NonAction]
         private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
         {
-            ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath);
-            ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-            
-            string textContent = ConvertToText(worksheet, CalculateColumnWidths(worksheet));
-          
-            try{
-                //string[] pathSegments = xlsxFilePath.Split('/'); 
-                //string fileName = pathSegments[pathSegments.Length - 1].Split('.')[0];
+            using (ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath))
+            {
+                ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5);
+                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet));
 
-                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
-                if (!string.IsNullOrEmpty(uploadedFileUri)){ViewBag.Message = "File Upload Successful";}
-                else{
-                    ViewBag.Message = "File Upload Failed";
-                    ViewBag.IsUpload = true;
+                try
+                {
+                    //string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
+                    string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
+                    if (!string.IsNullOrEmpty(uploadedFileUri)) { 
+                        ViewBag.Message = "File Upload Successful";
+                        await _hubContext.Clients.All.SendAsync("ReceiveProgress", 95);
+
+                    }
+                    else
+                    {
+                        ViewBag.Message = "File Upload Failed";
+                        ViewBag.IsUpload = true;
+                    }
                 }
+                catch (Exception ex) { }
             }
-            catch (Exception ex){}
-
-            package.Dispose();
+            
         }
 
         #endregion

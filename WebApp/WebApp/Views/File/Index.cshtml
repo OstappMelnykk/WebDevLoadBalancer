@@ -1,4 +1,8 @@
-﻿<h1>Buffered File Upload</h1>
+﻿@page
+@model IndexModel
+
+
+<h1>Buffered File Upload</h1>
 <a asp-controller="Home" asp-action="index">Home</a><br />
 <a asp-controller="Account" asp-action="Logout">Log off</a><br /><hr />
 
@@ -34,6 +38,29 @@ Process
         margin-right: 20px;
     }
 </style>
+
+
+
+
+
+
+
+
+<h1>Прогрес виконання задачі:</h1>
+<div id="progressContainer">
+    <div id="progressBar" style="width: 0;"></div>
+    <span id="progressText">0%</span>
+</div>
+
+<br />
+<br />
+<br />
+
+
+
+
+
+
 
 
 
@@ -96,3 +123,59 @@ Process
         }  
     } 
 </ul> 
+
+
+
+
+
+
+
+<style>
+    #progressContainer {
+        width: 40%;
+        height: 10px;
+        background-color: #f0f0f0; /* Колір фону контейнера */
+    }
+
+    #progressBar {
+        height: 100%;
+        width: 0;
+        background-color: #4CAF50; /* Колір заповнення прогресу */
+        text-align: center;
+        line-height: 30px;
+        color: white; /* Колір тексту внутрішнього заповнення */
+    }
+</style>
+
+
+
+@*<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.12/signalr.min.js"></script>*@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/progressHub")
+        .build();
+
+    connection.start().then(() => {
+        connection.on("ReceiveProgress", (progress) => {
+            // Оновлення відображення прогресу на сторінці
+            const progressBar = document.getElementById("progressBar");
+            const progressText = document.getElementById("progressText");
+            progressBar.style.width = `${progress}%`;
+            progressText.innerText = `${progress}%`;
+        });
+    });
+
+    // Викликайте метод ExecuteTask() на сервері, щоб почати виконання завдання
+    // Наприклад, додайте кнопку, яка викликає цей метод при кліку.
+    function startTask() {
+        $.post("/Your/ExecuteTask")
+            .done(function (data) {
+                // Завдання виконано
+            })
+            .fail(function (error) {
+                // Помилка під час виконання завдання
+            });
+    }
+</script>

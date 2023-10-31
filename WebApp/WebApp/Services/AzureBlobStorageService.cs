@@ -2,10 +2,12 @@
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.SignalR;
 using OfficeOpenXml;
 using System.Text;
 using WebApp.Interfaces;
 using WebApp.Models;
+using Azure.Storage.Blobs.Specialized;
 
 namespace WebApp.Services
 {
@@ -91,17 +93,23 @@ namespace WebApp.Services
 
         public async Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context)
         {
-            string folderPath = $"{userName}/ConvertedFiles/"; 
+            string folderPath = $"{userName}/ConvertedFiles/";
             string fileName = $"{title}.txt";
-          
+
             BlobClient blobClient = _containerClient.GetBlobClient(folderPath + fileName);
             await blobClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(textContent), true));
 
             //User user = context.Users.SingleOrDefault(u => u.UserName == userName.ToString());
             //AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, userName, user.Id.ToString(), user, context);
-            
+
             return blobClient.Uri.ToString();
         }
+
+
+
+
+
+
 
         public async Task<string> UploadFileAsync_TO_FilesToConvert(IFormFile file, string userName, ApplicationContext context)
         {
