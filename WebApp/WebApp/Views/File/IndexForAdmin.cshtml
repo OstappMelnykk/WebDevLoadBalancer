@@ -2,63 +2,6 @@
 @model IndexModel
 
 
-<h1>Buffered File Upload</h1>
-<a asp-controller="Home" asp-action="index">Home</a><br />
-<a asp-controller="Account" asp-action="Logout">Log off</a><br /><hr />
-
-<form asp-controller="File" asp-action="Upload" method="post" enctype="multipart/form-data">
-    <input type="file" name="file" />
-    <button type="submit">Upload File</button>
-</form>
-
-@{
-    var maxNumber = TempData["MaxNumber"] as string;
-}
-
-@if (!string.IsNullOrEmpty(maxNumber))
-{
-    <p style="color: red;">@maxNumber</p>
-}
-
-<form asp-controller="File" asp-action="Process" method="post" enctype="multipart/form-data">
-    <button type="submit">Process File</button>
-</form>
-
-Process
-
-@if (ViewBag.Message != null)
-{
-    <div class="alert" style="margin-top:20px">
-        @ViewBag.Message
-    </div>
-}
-
-
-<style>
-    .li_container{
-        background-color: grey;
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-    .content{
-        margin-right: 20px;
-    }
-</style>
-
-<form asp-controller="File" asp-action="CancelProcess" method="post">
-    <input type="submit" value="Скасувати операцію">
-</form>
-
-<br></br>
-<br></br>
-<br></br>
-
-<form asp-controller="File" asp-action="Delete_All_Uploaded" method="post" enctype="multipart/form-data">
-    <button type="submit"><h1>Delete_All_Uploaded</h1></button>
-</form>
-
 @if (ViewBag.DBFilesToConvert != null)
 {
     <style>
@@ -91,6 +34,8 @@ Process
             @foreach (var item in ViewBag.DBFilesToConvert)
             {
                 string Title = item.Title.Replace(".", "-");
+                <br></br>
+                <h1>@item.UserName</h1>
                 <li>
                     <div class="li_container">
                         <div class="content"><h2>@item.Title</h2></div>
@@ -107,6 +52,11 @@ Process
                         </div>
                     </div>
                 </li>
+
+                <br></br>
+                <br></br>
+                <br></br>
+                <br></br>
                
             }
         }
@@ -114,42 +64,6 @@ Process
 }
 
 
-
-
-<h1>===============================================</h1>
-<br />
-
-
-<form asp-controller="File" asp-action="Delete_All_Converted" method="post" enctype="multipart/form-data">
-    <button type="submit"><h1>Delete_All_Converted</h1></button>
-</form>
-
-
-<ul>
-    @if (ViewBag.DBConvertedFiles != null)
-    {
-        @foreach (var item in ViewBag.DBConvertedFiles)
-        {
-            <li>
-                <div class="li_container">
-                    <div class="content"><h2>@item.Title</h2></div>
-
-                    <div class="itemContainer">
-                        <form asp-controller="File" asp-action="DeleteConverted" asp-route-fullpath="@item.FullPath" method="post" enctype="multipart/form-data">
-                            <button type="submit">Delete</button>
-                        </form>
-                    </div>
-                    <div class="itemContainer">
-                        <form asp-controller="File" asp-action="Download" asp-route-blobPath="@item.FullPath" method="post" enctype="multipart/form-data">
-                            <button type="submit">Download</button>
-                        </form>
-                    </div>
-                </div> 
-            </li>    
-            
-        }  
-    } 
-</ul> 
 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>

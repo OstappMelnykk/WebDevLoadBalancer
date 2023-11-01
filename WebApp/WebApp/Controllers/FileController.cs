@@ -37,6 +37,15 @@ namespace WebApp.Controllers
             return View();
         }
 
+        [Authorize(Policy = "Administrator")]
+        public IActionResult IndexForAdmin()
+        {
+            ViewBag.DBFilesToConvert = db.FilesToConvert.ToList();
+            return View();
+        }
+
+
+
         [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
         [RequestSizeLimit(209715200)] // 200 MB
         [HttpPost]
@@ -81,17 +90,11 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Process()
         {
-            /*long elapsedTimeMilliseconds = MeasureTime(async () =>
-            {
-                
-            });*/
 
             var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
             string _UserName = User.Identity.Name;
 
             int numberOfFiles = files.Count();
-
-
 
             var parallelOptions = new ParallelOptions
             {
@@ -102,42 +105,23 @@ namespace WebApp.Controllers
             {
                 string filePath = item.FullPath;
                 string Title = item.Title.Split(".")[0];
-                _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, i);
-                ConvertXlsxToTxt(filePath, Title, db, (int)i).Wait();
+                _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, item.Title.Replace(".", "-"));
+
+
+
+
+                ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-")).Wait();
 
                 string folderPath = $"{_UserName}/ConvertedFiles/";
                 string fileName = $"{Title}.txt";
                 User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
                 AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
                 _azureBlobStorageService.DeleteBlobAsync(filePath).Wait();
-                _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, i);
+                _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
             });
-
-            /*
-            int i = 0;
-            foreach (var item in files)
-             {
-                 //await _hubContext.Clients.All.SendAsync("ReceiveProgress", (i / numberOfFiles) * 100);
-
-                 string filePath = item.FullPath;
-                 string Title = item.Title.Split(".")[0];
-                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, i);
-                 await ConvertXlsxToTxt(filePath, Title, db, i);
-
-                 string folderPath = $"{_UserName}/ConvertedFiles/";
-                 string fileName = $"{Title}.txt";
-                 User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
-                 AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
-                 await _azureBlobStorageService.DeleteBlobAsync(filePath);
-                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, i);
-                 i++;
-             }*/
-
-
 
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
             
-            //return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
             return RedirectToAction("Index", "file");
         }
 
@@ -167,9 +151,9 @@ namespace WebApp.Controllers
             return columnWidths;
         }
 
-        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, int id)
+        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, string Title)
         {
-            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10, id);
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10, Title);
 
             int rowCount = worksheet.Dimension.Rows;
             int colCount = worksheet.Dimension.Columns;
@@ -204,26 +188,26 @@ namespace WebApp.Controllers
 
 
                 progress += progressStep; // Оновлення прогресу на кожному кроці       
-                await _hubContext.Clients.All.SendAsync("ReceiveProgress", Math.Round(progress, 2), id);
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", Math.Round(progress, 2), Title);
 
             }
             textContent.AppendLine(horizontalLine);
 
            
-            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90, id);
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90, Title);
 
             return textContent.ToString();
         }
 
 
         [NonAction]
-        private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, int id)
+        private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, string Title)
         {
             using (ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath))
             {
                 ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5, id);
-                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), id);
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5, Title);
+                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), Title);
 
                 try
                 {
@@ -231,7 +215,7 @@ namespace WebApp.Controllers
                     string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
                     if (!string.IsNullOrEmpty(uploadedFileUri)) { 
                         ViewBag.Message = "File Upload Successful";
-                        await _hubContext.Clients.All.SendAsync("ReceiveProgress", 95, id);
+                        await _hubContext.Clients.All.SendAsync("ReceiveProgress", 95, Title);
 
                     }
                     else
