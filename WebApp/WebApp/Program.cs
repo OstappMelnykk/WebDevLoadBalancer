@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
+using WebApp.Hubs;
 using WebApp.Interfaces;
 using WebApp.Models;
 using WebApp.Services;
@@ -131,6 +132,7 @@ namespace WebApp
 
             app.UseEndpoints(endpoints =>
             {
+                endpoints.MapHub<jsCodeHub>("/jscodeHub");
                 endpoints.MapHub<ProgressHub>("/progressHub");
                 endpoints.MapControllerRoute(
                     name: "default",

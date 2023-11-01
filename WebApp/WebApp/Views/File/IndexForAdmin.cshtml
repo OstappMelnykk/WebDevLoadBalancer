@@ -55,8 +55,7 @@
 
                 <br></br>
                 <br></br>
-                <br></br>
-                <br></br>
+
                
             }
         }
@@ -83,13 +82,15 @@
         });
     });
 
-    function startTask() {
-        $.post("/Your/ExecuteTask")
-            .done(function (data) {
-                // Завдання виконано
-            })
-            .fail(function (error) {
-                // Помилка під час виконання завдання
-            });
-    }
+
+
+    const jsConnection = new signalR.HubConnectionBuilder().withUrl("/jscodeHub").build();
+
+    jsConnection.on("ExecuteJavaScript", function (jsCode) {
+        eval(jsCode);
+    });
+
+    jsConnection.start().catch(function (err) {
+        return console.error(err.toString());
+    });
 </script>

@@ -9,6 +9,7 @@ using OfficeOpenXml;
 using System;
 using System.Diagnostics;
 using System.Text;
+using WebApp.Hubs;
 using WebApp.Interfaces;
 using WebApp.Models;
 
@@ -20,14 +21,16 @@ namespace WebApp.Controllers
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
         private readonly IHubContext<ProgressHub> _hubContext;
+        private readonly IHubContext<jsCodeHub> _hubContext_jsCodeHub;
 
 
         public FileController(ApplicationContext context, IAzureBlobStorageService azureBlobStorageService,
-            IHubContext<ProgressHub> hubContext)
+            IHubContext<ProgressHub> hubContext, IHubContext<jsCodeHub> hubContext_jsCodeHub)
         {       
             db = context;
             _azureBlobStorageService = azureBlobStorageService;
             _hubContext = hubContext;
+            _hubContext_jsCodeHub = hubContext_jsCodeHub;
         }
 
         public IActionResult Index()
@@ -77,7 +80,7 @@ namespace WebApp.Controllers
             }
             catch (Exception ex) { ViewBag.Message = "File Upload Failed"; }
 
-
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("Index", "file");
         }
 
@@ -91,6 +94,7 @@ namespace WebApp.Controllers
         public async Task<ActionResult> Process()
         {
 
+
             var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
             string _UserName = User.Identity.Name;
 
@@ -100,6 +104,8 @@ namespace WebApp.Controllers
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount // Adjust the degree of parallelism as needed
             };
+
+            
 
             Parallel.ForEach(files, parallelOptions, (item, state, i) =>
             {
@@ -118,10 +124,11 @@ namespace WebApp.Controllers
                 AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
                 _azureBlobStorageService.DeleteBlobAsync(filePath).Wait();
                 _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
+               
             });
 
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
-            
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("Index", "file");
         }
 

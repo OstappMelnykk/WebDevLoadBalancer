@@ -168,14 +168,4 @@ Process
             progressText.innerText = `${progress}%`;
         });
     });
-
-    function startTask() {
-        $.post("/Your/ExecuteTask")
-            .done(function (data) {
-                // Завдання виконано
-            })
-            .fail(function (error) {
-                // Помилка під час виконання завдання
-            });
-    }
 </script>

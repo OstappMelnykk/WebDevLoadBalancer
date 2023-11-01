@@ -35,8 +35,8 @@ namespace WebApp.Controllers
 
 				if (result.Succeeded)
 				{
-					_userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "User")).GetAwaiter().GetResult();
-					/*_userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "Administrator")).GetAwaiter().GetResult();*/
+					/*_userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "User")).GetAwaiter().GetResult();*/
+					_userManager.AddClaimAsync(user, new Claim(ClaimTypes.Role, "Administrator")).GetAwaiter().GetResult();
 
 					await _signInManager.SignInAsync(user, false);
 					return RedirectToAction("Index", "Home");
