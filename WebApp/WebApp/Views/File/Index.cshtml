@@ -11,6 +11,14 @@
     <button type="submit">Upload File</button>
 </form>
 
+@{
+    var maxNumber = TempData["MaxNumber"] as string;
+}
+
+@if (!string.IsNullOrEmpty(maxNumber))
+{
+    <p style="color: red;">@maxNumber</p>
+}
 
 <form asp-controller="File" asp-action="Process" method="post" enctype="multipart/form-data">
     <button type="submit">Process File</button>
@@ -39,55 +47,71 @@ Process
     }
 </style>
 
+<form asp-controller="File" asp-action="CancelProcess" method="post">
+    <input type="submit" value="Скасувати операцію">
+</form>
 
-
-
-
-
-
-
-<h1>Прогрес виконання задачі:</h1>
-<div id="progressContainer">
-    <div id="progressBar" style="width: 0;"></div>
-    <span id="progressText">0%</span>
-</div>
-
-<br />
-<br />
-<br />
-
-
-
-
-
-
-
-
+<br></br>
+<br></br>
+<br></br>
 
 <form asp-controller="File" asp-action="Delete_All_Uploaded" method="post" enctype="multipart/form-data">
     <button type="submit"><h1>Delete_All_Uploaded</h1></button>
 </form>
 
-
-<ul>
-    @if (ViewBag.DBFilesToConvert != null)
-    {
-        @foreach (var item in ViewBag.DBFilesToConvert)
+@if (ViewBag.DBFilesToConvert != null)
+{
+    <style>
+        @for (int j = 0; j < ViewBag.DBFilesToConvert.Count; j++)
         {
-            <li>
-                <div class="li_container">
-                    <div class="content"><h2>@item.Title</h2></div>
+            <text>
+                #progressContainer_@j {
+                    width: 40%;
+                    height: 10px;
+                    background-color: #f0f0f0;
+                }
 
-                    <div class="itemContainer">
-                        <form asp-controller="File" asp-action="DeleteUploaded" asp-route-fullpath="@item.FullPath" method="post" enctype="multipart/form-data">
-                            <button type="submit">Delete</button>
-                        </form>
+                #progressBar_@j {
+                    height: 100%;
+                    width: 0;
+                    background-color: #4CAF50;
+                    text-align: center;
+                    line-height: 30px;
+                    color: white;
+                }
+            </text>
+        }
+    </style>
+
+    <ul>
+        @if (ViewBag.DBFilesToConvert != null)
+        {
+            int i = 0;
+            @foreach (var item in ViewBag.DBFilesToConvert)
+            {
+                <li>
+                    <div class="li_container">
+                        <div class="content"><h2>@item.Title</h2></div>
+
+                        <div class="itemContainer">
+                            <form asp-controller="File" asp-action="DeleteUploaded" asp-route-fullpath="@item.FullPath" method="post" enctype="multipart/form-data">
+                                <button type="submit">Delete</button>
+                            </form>
+                        </div>
+
+                        <div id="progressContainer_@i">
+                            <div id="progressBar_@i" style="width: 0;"></div>
+                            <span id="progressText_@i">0%</span>
+                        </div>
                     </div>
-                </div> 
-            </li>     
-        }   
-    }
-</ul> 
+                </li>
+                i++;
+            }
+        }
+    </ul>
+}
+
+
 
 
 <h1>===============================================</h1>
@@ -119,37 +143,13 @@ Process
                         </form>
                     </div>
                 </div> 
-            </li>      
+            </li>    
+            
         }  
     } 
 </ul> 
 
 
-
-
-
-
-
-<style>
-    #progressContainer {
-        width: 40%;
-        height: 10px;
-        background-color: #f0f0f0; /* Колір фону контейнера */
-    }
-
-    #progressBar {
-        height: 100%;
-        width: 0;
-        background-color: #4CAF50; /* Колір заповнення прогресу */
-        text-align: center;
-        line-height: 30px;
-        color: white; /* Колір тексту внутрішнього заповнення */
-    }
-</style>
-
-
-
-@*<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.12/signalr.min.js"></script>*@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -158,17 +158,15 @@ Process
         .build();
 
     connection.start().then(() => {
-        connection.on("ReceiveProgress", (progress) => {
+        connection.on("ReceiveProgress", (progress, receivedId) => {
             // Оновлення відображення прогресу на сторінці
-            const progressBar = document.getElementById("progressBar");
-            const progressText = document.getElementById("progressText");
+            const progressBar = document.getElementById("progressBar_" + receivedId);
+            const progressText = document.getElementById("progressText_" + receivedId);
             progressBar.style.width = `${progress}%`;
             progressText.innerText = `${progress}%`;
         });
     });
 
-    // Викликайте метод ExecuteTask() на сервері, щоб почати виконання завдання
-    // Наприклад, додайте кнопку, яка викликає цей метод при кліку.
     function startTask() {
         $.post("/Your/ExecuteTask")
             .done(function (data) {

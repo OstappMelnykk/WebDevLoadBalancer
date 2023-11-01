@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OfficeOpenXml;
 using System;
 using System.Diagnostics;
@@ -41,15 +42,28 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Upload(IFormFile file)
         {
+            var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+            ViewBag.MaxNumber = "";
+
+            int numberOfFiles = files.Count();
             try
             {
-                string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_FilesToConvert(file, User.Identity.Name, db);
-                if (!string.IsNullOrEmpty(uploadedFileUri)) ViewBag.Message = "File Upload Successful";
+                if (numberOfFiles < 3)
+                {
+                    string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_FilesToConvert(file, User.Identity.Name, db);
+                    if (!string.IsNullOrEmpty(uploadedFileUri)) ViewBag.Message = "File Upload Successful";
+                    else
+                    {
+                        ViewBag.Message = "File Upload Failed";
+                        ViewBag.IsUpload = true;
+                    }
+                }
                 else
                 {
-                    ViewBag.Message = "File Upload Failed";
-                    ViewBag.IsUpload = true;
+                    TempData["MaxNumber"] = "maximum 3 files";
+                    return RedirectToAction("Index", "file");
                 }
+                
 
             }
             catch (Exception ex) { ViewBag.Message = "File Upload Failed"; }
@@ -78,26 +92,51 @@ namespace WebApp.Controllers
             int numberOfFiles = files.Count();
 
 
-            int i = 0;
-            foreach (var item in files)
-            {
-                //await _hubContext.Clients.All.SendAsync("ReceiveProgress", (i / numberOfFiles) * 100);
 
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount // Adjust the degree of parallelism as needed
+            };
+
+            Parallel.ForEach(files, parallelOptions, (item, state, i) =>
+            {
                 string filePath = item.FullPath;
                 string Title = item.Title.Split(".")[0];
-                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 2);
-                await ConvertXlsxToTxt(filePath, Title, db);
+                _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, i);
+                ConvertXlsxToTxt(filePath, Title, db, (int)i).Wait();
 
                 string folderPath = $"{_UserName}/ConvertedFiles/";
                 string fileName = $"{Title}.txt";
                 User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
                 AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
-                await _azureBlobStorageService.DeleteBlobAsync(filePath);
-                i++;
-            }
+                _azureBlobStorageService.DeleteBlobAsync(filePath).Wait();
+                _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, i);
+            });
+
+            /*
+            int i = 0;
+            foreach (var item in files)
+             {
+                 //await _hubContext.Clients.All.SendAsync("ReceiveProgress", (i / numberOfFiles) * 100);
+
+                 string filePath = item.FullPath;
+                 string Title = item.Title.Split(".")[0];
+                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, i);
+                 await ConvertXlsxToTxt(filePath, Title, db, i);
+
+                 string folderPath = $"{_UserName}/ConvertedFiles/";
+                 string fileName = $"{Title}.txt";
+                 User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
+                 AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
+                 await _azureBlobStorageService.DeleteBlobAsync(filePath);
+                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, i);
+                 i++;
+             }*/
+
+
 
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
-            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 100);
+            
             //return Content($"Elapsed Time: {elapsedTimeMilliseconds} ms");
             return RedirectToAction("Index", "file");
         }
@@ -128,9 +167,9 @@ namespace WebApp.Controllers
             return columnWidths;
         }
 
-        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths)
+        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, int id)
         {
-            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10);
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10, id);
 
             int rowCount = worksheet.Dimension.Rows;
             int colCount = worksheet.Dimension.Columns;
@@ -165,26 +204,26 @@ namespace WebApp.Controllers
 
 
                 progress += progressStep; // Оновлення прогресу на кожному кроці       
-                await _hubContext.Clients.All.SendAsync("ReceiveProgress", Math.Round(progress, 2));
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", Math.Round(progress, 2), id);
 
             }
             textContent.AppendLine(horizontalLine);
 
            
-            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90);
+            await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90, id);
 
             return textContent.ToString();
         }
 
 
         [NonAction]
-        private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db)
+        private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, int id)
         {
             using (ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath))
             {
                 ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5);
-                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet));
+                await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5, id);
+                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), id);
 
                 try
                 {
@@ -192,7 +231,7 @@ namespace WebApp.Controllers
                     string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
                     if (!string.IsNullOrEmpty(uploadedFileUri)) { 
                         ViewBag.Message = "File Upload Successful";
-                        await _hubContext.Clients.All.SendAsync("ReceiveProgress", 95);
+                        await _hubContext.Clients.All.SendAsync("ReceiveProgress", 95, id);
 
                     }
                     else
