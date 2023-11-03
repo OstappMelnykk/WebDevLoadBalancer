@@ -17,7 +17,9 @@ namespace WebApp.Controllers
 {
     [Authorize]
     public class FileController : Controller
-    {       
+    {
+        private static bool isСanceled = false;
+
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
         private readonly IHubContext<ProgressHub> _hubContext;
@@ -86,46 +88,89 @@ namespace WebApp.Controllers
 
         #region convertation proccess
 
-        
 
-
+        [HttpPost]
+        public async Task<ActionResult> Сancel()
+        {
+            isСanceled = true;
+            return RedirectToAction("index");
+        }
 
         [HttpPost]
         public async Task<ActionResult> Process()
         {
 
 
-            var files = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+            var FilesToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
             string _UserName = User.Identity.Name;
 
-            int numberOfFiles = files.Count();
+            int numberOfFiles = FilesToConvert.Count();
 
             var parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount // Adjust the degree of parallelism as needed
             };
 
-            
+            List<Task> tasks = new List<Task>();
+            List<Task> deleteTasks = new List<Task>();
 
-            Parallel.ForEach(files, parallelOptions, (item, state, i) =>
+
+            Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
             {
-                string filePath = item.FullPath;
-                string Title = item.Title.Split(".")[0];
-                _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, item.Title.Replace(".", "-"));
+                Task task = Task.Run(() =>
+                {
+                    string filePath = item.FullPath;
+                    string Title = item.Title.Split(".")[0];
+                    _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, item.Title.Replace(".", "-"));
 
+                    ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-")).Wait();
 
+                    string folderPath = $"{_UserName}/ConvertedFiles/";
+                    string fileName = $"{Title}.txt";
+                    User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
+                    AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
+                    /*_azureBlobStorageService.DeleteBlobAsync(filePath).Wait();*/
+                    _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
+                });
 
-
-                ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-")).Wait();
-
-                string folderPath = $"{_UserName}/ConvertedFiles/";
-                string fileName = $"{Title}.txt";
-                User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
-                AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
-                _azureBlobStorageService.DeleteBlobAsync(filePath).Wait();
-                _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
-               
+                tasks.Add(task);
             });
+
+            await Task.WhenAll(tasks);
+
+
+            if (isСanceled)
+            {
+                var ConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
+                var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+                foreach (var item in F_ToConvert)
+                {
+                    var fileToDelete = ConvertedFiles.Where(f => f.Title.Split(".")[0] == item.Title.Split(".")[0]).FirstOrDefault();
+                    db.DeleteConvertedFilesByUserNameAndFullPath(User.Identity.Name.ToString(), fileToDelete.FullPath);
+                    await _azureBlobStorageService.DeleteBlobAsync(fileToDelete.FullPath);
+                }
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+                return RedirectToAction("Index", "file");
+            }
+
+
+
+
+            Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
+            {
+                Task deleteTask = Task.Run(async () =>
+                {
+                    string filePath = item.FullPath;
+                    await _azureBlobStorageService.DeleteBlobAsync(filePath);
+                });
+
+                deleteTasks.Add(deleteTask);
+            });
+
+            Task.WhenAll(deleteTasks).Wait();
+
+
+
 
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
             _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
