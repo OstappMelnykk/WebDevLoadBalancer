@@ -1,5 +1,6 @@
 ﻿using Aspose.Cells.Charts;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Options;
 using OfficeOpenXml;
 using System;
 using System.Diagnostics;
+using System.Drawing.Text;
 using System.Text;
 using WebApp.Hubs;
 using WebApp.Interfaces;
@@ -19,6 +21,12 @@ namespace WebApp.Controllers
     public class FileController : Controller
     {
         private static bool isСanceled = false;
+        private static bool isUploadedOnlyToAzure = false;
+        private static bool isUploadedToAzureAndDB = false;
+        
+
+
+
 
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
@@ -117,29 +125,90 @@ namespace WebApp.Controllers
 
             Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
             {
-                Task task = Task.Run(() =>
+                Task task = Task.Run(async () =>
                 {
                     string filePath = item.FullPath;
                     string Title = item.Title.Split(".")[0];
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, item.Title.Replace(".", "-"));
+                    Thread.Sleep(5000);
 
-                    ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-")).Wait();
+
+                    if (isСanceled) return;
+
+                    
+
+                    bool ConvertXlsxToTxtResult = await ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-"));
+
+                    if (ConvertXlsxToTxtResult == false)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        lock (tasks)
+                        {
+                            isUploadedOnlyToAzure = true;
+                        }
+                    }
+
+                    
+
+                    _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "alert('h');");
+                    Thread.Sleep(5000);
+                    if (isСanceled) return;
+
 
                     string folderPath = $"{_UserName}/ConvertedFiles/";
                     string fileName = $"{Title}.txt";
                     User user = db.Users.SingleOrDefault(u => u.UserName == _UserName);
-                    AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
-                    /*_azureBlobStorageService.DeleteBlobAsync(filePath).Wait();*/
+                   
+
+
+                    lock (tasks)
+                    {
+                        AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
+                        isUploadedToAzureAndDB = true; // Помічаємо, що є хоча б один успішно добавлений файл
+                    }
+                    if (isСanceled) return;
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
+                
                 });
 
                 tasks.Add(task);
+
             });
 
             await Task.WhenAll(tasks);
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
 
-            if (isСanceled)
+            if (isСanceled && isUploadedOnlyToAzure)
+            {
+                //var ConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
+                var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+                foreach (var item in F_ToConvert)
+                {
+                   
+                    var PathToDelete = $"{User.Identity.Name}/ConvertedFiles/" + item.Title.Split(".")[0] + ".txt";
+
+                    if (await _azureBlobStorageService.IsPathExists(PathToDelete))
+                    {
+                        await _azureBlobStorageService.DeleteBlobAsync(PathToDelete);
+                    }
+                     
+                }
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+
+                isСanceled = false;
+                isUploadedOnlyToAzure = false;
+                isUploadedToAzureAndDB = false;
+
+                return RedirectToAction("Index", "file");
+            }
+
+
+
+            if (isСanceled && isUploadedToAzureAndDB)
             {
                 var ConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
                 var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
@@ -150,30 +219,38 @@ namespace WebApp.Controllers
                     await _azureBlobStorageService.DeleteBlobAsync(fileToDelete.FullPath);
                 }
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+
+
+                isСanceled = false;
+                isUploadedOnlyToAzure = false;
+                isUploadedToAzureAndDB = false;
+
                 return RedirectToAction("Index", "file");
             }
 
 
-
-
-            Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
+            if (!isСanceled)
             {
-                Task deleteTask = Task.Run(async () =>
+                Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
                 {
-                    string filePath = item.FullPath;
-                    await _azureBlobStorageService.DeleteBlobAsync(filePath);
+                    Task deleteTask = Task.Run(async () =>
+                    {
+                        string filePath = item.FullPath;
+                        await _azureBlobStorageService.DeleteBlobAsync(filePath);
+                    });
+
+                    deleteTasks.Add(deleteTask);
                 });
 
-                deleteTasks.Add(deleteTask);
-            });
-
-            Task.WhenAll(deleteTasks).Wait();
-
-
+                Task.WhenAll(deleteTasks).Wait();
+                db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+            }
 
 
-            db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
-            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+            isСanceled = false;
+            isUploadedOnlyToAzure = false;
+            isUploadedToAzureAndDB = false;
             return RedirectToAction("Index", "file");
         }
 
@@ -205,24 +282,28 @@ namespace WebApp.Controllers
 
         private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, string Title)
         {
+            if (isСanceled) return null;
             await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10, Title);
+            if (isСanceled) return null;
 
             int rowCount = worksheet.Dimension.Rows;
             int colCount = worksheet.Dimension.Columns;
             int maxLineWidth = columnWidths.Sum() + 4 * colCount;
             string horizontalLine = new string('-', maxLineWidth);
             StringBuilder textContent = new StringBuilder();
+            if (isСanceled) return null;
 
             textContent.AppendLine(horizontalLine);
 
             for (int col = 1; col <= colCount; col++)
             {
+                if (isСanceled) return null;
                 int a = -(columnWidths[col - 1] + 2);
                 textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[1, col].Text);
             }
             textContent.AppendLine("|");
             textContent.AppendLine(horizontalLine);
-
+            if (isСanceled) return null;
 
             double progressStep = 80.0 / (rowCount - 1); // Обчислюємо крок для досягнення 90% з 10% за весь рядок
 
@@ -235,6 +316,7 @@ namespace WebApp.Controllers
                 {
                     int a = -(columnWidths[col - 1] + 2);
                     textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[row, col].Text);
+                    if (isСanceled) return null;
                 }
                 textContent.AppendLine("|");
 
@@ -245,21 +327,30 @@ namespace WebApp.Controllers
             }
             textContent.AppendLine(horizontalLine);
 
-           
+            if (isСanceled) return null;
             await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90, Title);
-
+            if (isСanceled) return null;
             return textContent.ToString();
         }
 
 
         [NonAction]
-        private async Task ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, string Title)
+        private async Task<bool> ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, string Title)
         {
+
+            if (isСanceled) return false;
+
             using (ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath))
             {
                 ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5, Title);
+                if (isСanceled) return false;
                 string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), Title);
+
+                if (textContent == null)
+                {
+                    return false;
+                }
 
                 try
                 {
@@ -267,17 +358,21 @@ namespace WebApp.Controllers
                     string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
                     if (!string.IsNullOrEmpty(uploadedFileUri)) { 
                         ViewBag.Message = "File Upload Successful";
+                        
                         await _hubContext.Clients.All.SendAsync("ReceiveProgress", 95, Title);
+                        return true; //isUploadedToAzure = true;
 
                     }
                     else
                     {
                         ViewBag.Message = "File Upload Failed";
-                        ViewBag.IsUpload = true;
+                        
                     }
                 }
                 catch (Exception ex) { }
             }
+
+            return false;
             
         }
 

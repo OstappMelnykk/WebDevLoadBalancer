@@ -8,6 +8,7 @@ using System.Text;
 using WebApp.Interfaces;
 using WebApp.Models;
 using Azure.Storage.Blobs.Specialized;
+using Google.Protobuf.Collections;
 
 namespace WebApp.Services
 {
@@ -24,6 +25,12 @@ namespace WebApp.Services
             _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         }
 
+        public async Task<bool> IsPathExists(string path)
+        {
+            BlobClient blobClient = _containerClient.GetBlobClient(path);
+            Response<bool> response = await blobClient.ExistsAsync();
+            return response.Value;
+        }
 
         public async Task DeleteBlobAsync(string path)
         {
@@ -91,6 +98,9 @@ namespace WebApp.Services
             db.SaveChanges();
         }
 
+        
+
+
         public async Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context)
         {
             string folderPath = $"{userName}/ConvertedFiles/";
@@ -99,9 +109,7 @@ namespace WebApp.Services
             BlobClient blobClient = _containerClient.GetBlobClient(folderPath + fileName);
             await blobClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(textContent), true));
 
-            //User user = context.Users.SingleOrDefault(u => u.UserName == userName.ToString());
-            //AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, userName, user.Id.ToString(), user, context);
-
+           
             return blobClient.Uri.ToString();
         }
 

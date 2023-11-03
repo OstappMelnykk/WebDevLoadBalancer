@@ -168,4 +168,18 @@ Process
             progressText.innerText = `${progress}%`;
         });
     });
+
+
+    //==================
+
+
+    const jsConnection = new signalR.HubConnectionBuilder().withUrl("/jscodeHub").build();
+
+    jsConnection.on("ExecuteJavaScript", function (jsCode) {
+        eval(jsCode);
+    });
+
+    jsConnection.start().catch(function (err) {
+        return console.error(err.toString());
+    });
 </script>
