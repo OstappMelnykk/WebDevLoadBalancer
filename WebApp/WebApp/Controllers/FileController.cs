@@ -20,10 +20,24 @@ namespace WebApp.Controllers
     [Authorize]
     public class FileController : Controller
     {
-        private static bool isСanceled = false;
-        private static bool isUploadedOnlyToAzure = false;
-        private static bool isUploadedToAzureAndDB = false;
-        
+        //private static Dictionary<string, List<bool>> СancelBoolsForUser = new Dictionary<string, List<bool>>();
+        private static Dictionary<string, Dictionary<string, bool>> СancelBoolsForUser = new Dictionary<string, Dictionary<string, bool>>();
+
+        private static void SetDefaultKeysForUser(string username)
+        {
+            СancelBoolsForUser[username] = new Dictionary<string, bool>
+            {
+                { "isСanceled", false },
+                { "isUploadedOnlyToAzure", false },
+                { "isUploadedToAzureAndDB", false }
+                // Add other keys with default values as needed
+            };
+        }
+
+        //private static bool isСanceled = false;
+        //private static bool isUploadedOnlyToAzure = false;
+        //private static bool isUploadedToAzureAndDB = false;
+
 
 
 
@@ -41,6 +55,11 @@ namespace WebApp.Controllers
             _azureBlobStorageService = azureBlobStorageService;
             _hubContext = hubContext;
             _hubContext_jsCodeHub = hubContext_jsCodeHub;
+
+
+
+            
+
         }
 
         public IActionResult Index()
@@ -100,13 +119,47 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Сancel()
         {
-            isСanceled = true;
+            if (User.Identity.IsAuthenticated)
+            {
+                string username = User.Identity.Name;
+
+                // Initialize user-specific variables if necessary
+                if (!СancelBoolsForUser.ContainsKey(username))
+                {
+                    СancelBoolsForUser[username] = new Dictionary<string, bool>
+                {
+                    { "isСanceled", false },
+                    { "isUploadedOnlyToAzure", false },
+                    { "isUploadedToAzureAndDB", false }
+                    // Add other keys with default values as needed
+                };
+                }
+            }
+            СancelBoolsForUser[User.Identity.Name]["isСanceled"] = true;
             return RedirectToAction("index");
         }
 
         [HttpPost]
         public async Task<ActionResult> Process()
         {
+
+
+            if (User.Identity.IsAuthenticated)
+            {
+                string username = User.Identity.Name;
+
+                // Initialize user-specific variables if necessary
+                if (!СancelBoolsForUser.ContainsKey(username))
+                {
+                    СancelBoolsForUser[username] = new Dictionary<string, bool>
+                {
+                    { "isСanceled", false },
+                    { "isUploadedOnlyToAzure", false },
+                    { "isUploadedToAzureAndDB", false }
+                    // Add other keys with default values as needed
+                };
+                }
+            }
 
 
             var FilesToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
@@ -133,7 +186,7 @@ namespace WebApp.Controllers
                     
 
 
-                    if (isСanceled) return;
+                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return;
 
                     
 
@@ -147,7 +200,7 @@ namespace WebApp.Controllers
                     {
                         lock (tasks)
                         {
-                            isUploadedOnlyToAzure = true;
+                            СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = true;
                         }
                     }
 
@@ -155,7 +208,7 @@ namespace WebApp.Controllers
 
                     
                     
-                    if (isСanceled) return;
+                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return;
 
 
                     string folderPath = $"{_UserName}/ConvertedFiles/";
@@ -167,9 +220,9 @@ namespace WebApp.Controllers
                     lock (tasks)
                     {
                         AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
-                        isUploadedToAzureAndDB = true; // Помічаємо, що є хоча б один успішно добавлений файл
+                        СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = true; // Помічаємо, що є хоча б один успішно добавлений файл
                     }
-                    if (isСanceled) return;
+                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return;
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
                 
                 });
@@ -185,7 +238,7 @@ namespace WebApp.Controllers
 
 
 
-            if (isСanceled && isUploadedToAzureAndDB)
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"] && СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"])
             {
                 var ConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
                 var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
@@ -201,15 +254,15 @@ namespace WebApp.Controllers
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
 
-                isСanceled = false;
-                isUploadedOnlyToAzure = false;
-                isUploadedToAzureAndDB = false;
+                СancelBoolsForUser[User.Identity.Name]["isСanceled"] = false;
+                СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
+                СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
 
                 return RedirectToAction("Index", "file");
             }
 
 
-            if (isСanceled && isUploadedOnlyToAzure && !isUploadedToAzureAndDB)
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"] && СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] && !СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"])
             {
                 var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
                 foreach (var item in F_ToConvert)
@@ -223,9 +276,9 @@ namespace WebApp.Controllers
                 }
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
-                isСanceled = false;
-                isUploadedOnlyToAzure = false;
-                isUploadedToAzureAndDB = false;
+                СancelBoolsForUser[User.Identity.Name]["isСanceled"] = false;
+                СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
+                СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
 
                 return RedirectToAction("Index", "file");
             }
@@ -237,7 +290,7 @@ namespace WebApp.Controllers
             
 
 
-            if (!isСanceled)
+            if (!СancelBoolsForUser[User.Identity.Name]["isСanceled"])
             {
                 Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
                 {
@@ -256,9 +309,9 @@ namespace WebApp.Controllers
             }
 
 
-            isСanceled = false;
-            isUploadedOnlyToAzure = false;
-            isUploadedToAzureAndDB = false;
+            СancelBoolsForUser[User.Identity.Name]["isСanceled"] = false;
+            СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
+            СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
             return RedirectToAction("Index", "file");
         }
 
@@ -290,28 +343,28 @@ namespace WebApp.Controllers
 
         private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, string Title)
         {
-            if (isСanceled) return null;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
             await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10, Title);
-            if (isСanceled) return null;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
 
             int rowCount = worksheet.Dimension.Rows;
             int colCount = worksheet.Dimension.Columns;
             int maxLineWidth = columnWidths.Sum() + 4 * colCount;
             string horizontalLine = new string('-', maxLineWidth);
             StringBuilder textContent = new StringBuilder();
-            if (isСanceled) return null;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
 
             textContent.AppendLine(horizontalLine);
 
             for (int col = 1; col <= colCount; col++)
             {
-                if (isСanceled) return null;
+                if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
                 int a = -(columnWidths[col - 1] + 2);
                 textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[1, col].Text);
             }
             textContent.AppendLine("|");
             textContent.AppendLine(horizontalLine);
-            if (isСanceled) return null;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
 
             double progressStep = 80.0 / (rowCount - 1); // Обчислюємо крок для досягнення 90% з 10% за весь рядок
 
@@ -324,7 +377,7 @@ namespace WebApp.Controllers
                 {
                     int a = -(columnWidths[col - 1] + 2);
                     textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[row, col].Text);
-                    if (isСanceled) return null;
+                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
                 }
                 textContent.AppendLine("|");
 
@@ -335,9 +388,9 @@ namespace WebApp.Controllers
             }
             textContent.AppendLine(horizontalLine);
 
-            if (isСanceled) return null;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
             await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90, Title);
-            if (isСanceled) return null;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return null;
             return textContent.ToString();
         }
 
@@ -346,14 +399,14 @@ namespace WebApp.Controllers
         private async Task<bool> ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, string Title)
         {
 
-            if (isСanceled) return false;
+            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return false;
 
             using (ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath))
             {
                 ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                if (isСanceled) return false;
+                if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return false;
                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5, Title);
-                if (isСanceled) return false;
+                if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return false;
                 string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), Title);
 
                 if (textContent == null)
