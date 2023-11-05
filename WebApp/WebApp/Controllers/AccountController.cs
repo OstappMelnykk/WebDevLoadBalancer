@@ -44,7 +44,10 @@ namespace WebApp.Controllers
 				else
 				{
 					foreach (var error in result.Errors)
+					{
                         ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                       
                 }
 			}
 			return View(model);
@@ -70,6 +73,7 @@ namespace WebApp.Controllers
                 else
                     ModelState.AddModelError("", "Incorrect login and (or) password");
             }
+
             return View(model);
 		}
 

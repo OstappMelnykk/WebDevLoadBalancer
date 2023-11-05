@@ -18,17 +18,11 @@ namespace WebApp
         {
             var builder = WebApplication.CreateBuilder(args);
 
-
-
             builder.Services.AddSignalR();
 
-
             builder.Services.AddTransient<IAzureBlobStorageService, AzureBlobStorageService>();
-
-           
+         
             #region Connection to DB
-
-
             string connection = builder.Configuration.GetConnectionString("DefaultConnection");
 
 			builder.Services
@@ -44,8 +38,6 @@ namespace WebApp
                     config.Password.RequiredLength = 4;
                 })
                 .AddEntityFrameworkStores<ApplicationContext>();
-
-
             #endregion
 
             #region Configuration of Authentication & Authorization
@@ -66,24 +58,17 @@ namespace WebApp
             });
 
 
-
-
             builder.Services.AddCookiePolicy(options => { options.MinimumSameSitePolicy = SameSiteMode.Lax; });
+
             builder.Services.ConfigureApplicationCookie(options =>
             {
-                options.Cookie.SameSite = SameSiteMode.Lax; // або SameSiteMode.None
-                // Інші налаштування куків тут
+                options.Cookie.SameSite = SameSiteMode.Lax;              
             });
 
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
-
-
-
-
-
             #endregion
 
             builder.Services.AddControllersWithViews();
@@ -106,13 +91,10 @@ namespace WebApp
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
 
-
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedProto
             });
-
-
 
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
@@ -126,10 +108,6 @@ namespace WebApp
 
             #endregion
 
-            // app.MapControllerRoute(
-            //     name: "default",
-            //     pattern: "{controller=Home}/{action=Index}/{id?}");
-
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapHub<jsCodeHub>("/jscodeHub");
@@ -138,8 +116,6 @@ namespace WebApp
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");             
             });
-
-
 
             app.Run();
         }

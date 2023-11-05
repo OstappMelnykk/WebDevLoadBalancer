@@ -6,7 +6,6 @@ namespace WebApp.Hubs
     {
         public async Task ExecuteJavaScript(string jsCode)
         {
-
             await Clients.Caller.SendAsync("ExecuteJavaScript", jsCode);
         }
     }

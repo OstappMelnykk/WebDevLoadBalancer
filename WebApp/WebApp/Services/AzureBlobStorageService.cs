@@ -22,6 +22,7 @@ namespace WebApp.Services
             string containerName = configuration.GetSection("AzureBlobStorage")["ContainerName"];
 
             BlobServiceClient blobServiceClient = new BlobServiceClient(connectionString);
+
             _containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         }
 
@@ -34,7 +35,10 @@ namespace WebApp.Services
 
         public async Task DeleteBlobAsync(string path)
         {
-            try{await _containerClient.GetBlobClient(path).DeleteAsync(DeleteSnapshotsOption.IncludeSnapshots);}
+            try
+            {
+                await _containerClient.GetBlobClient(path).DeleteAsync(DeleteSnapshotsOption.IncludeSnapshots);
+            }
             catch (RequestFailedException ex){}
         }
 
@@ -48,6 +52,7 @@ namespace WebApp.Services
                 memoryStream.Position = 0;
 
                 ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
                 return new ExcelPackage(memoryStream);
             }
         }
@@ -99,24 +104,17 @@ namespace WebApp.Services
         }
 
         
-
-
         public async Task<string> UploadFileAsync_TO_ConvertedFiles(string textContent, string userName, string title, ApplicationContext context)
         {
             string folderPath = $"{userName}/ConvertedFiles/";
             string fileName = $"{title}.txt";
 
             BlobClient blobClient = _containerClient.GetBlobClient(folderPath + fileName);
-            await blobClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(textContent), true));
 
+            await blobClient.UploadAsync(new MemoryStream(Encoding.UTF8.GetBytes(textContent), true));
            
             return blobClient.Uri.ToString();
         }
-
-
-
-
-
 
 
         public async Task<string> UploadFileAsync_TO_FilesToConvert(IFormFile file, string userName, ApplicationContext context)

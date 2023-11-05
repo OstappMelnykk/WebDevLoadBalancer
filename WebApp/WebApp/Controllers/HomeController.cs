@@ -20,14 +20,6 @@ namespace WebApp.Controllers
             ViewBag.Name = User.Identity.Name;
             ViewBag.IsAuthenticated = User.Identity.IsAuthenticated;
 
-            var host = HttpContext.Request.Host.Host;
-            var port = HttpContext.Request.Host.Port;
-            var scheme = HttpContext.Request.Scheme;
-
-            ViewData["Host"] = host;
-            ViewData["Port"] = port;
-            ViewData["Scheme"] = scheme;
-
             ViewData["HostName"] = Environment.MachineName;
             return View();
         }
