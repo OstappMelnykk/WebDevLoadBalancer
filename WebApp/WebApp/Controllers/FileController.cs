@@ -50,6 +50,8 @@ namespace WebApp.Controllers
             return View();
         }
 
+
+
         [RequestFormLimits(MultipartBodyLengthLimit = 209715200)] // 200 MB
         [RequestSizeLimit(209715200)] // 200 MB
         [HttpPost]
@@ -106,6 +108,8 @@ namespace WebApp.Controllers
                 }
             }
             СancelBoolsForUser[User.Identity.Name]["isСanceled"] = true;
+
+            //_hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("index");
         }
 
@@ -114,6 +118,8 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Process()
         {
+            
+
             if (User.Identity.IsAuthenticated)
             {
                 string username = User.Identity.Name;
@@ -189,7 +195,8 @@ namespace WebApp.Controllers
             });
 
             await Task.WhenAll(tasks);
-            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+            
+            //_hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
             if (СancelBoolsForUser[User.Identity.Name]["isСanceled"] && СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"])
             {
@@ -210,6 +217,8 @@ namespace WebApp.Controllers
                 СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
                 СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
 
+                
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
                 return RedirectToAction("Index", "file");
             }
 
@@ -234,6 +243,8 @@ namespace WebApp.Controllers
                 СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
                 СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
 
+               
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
                 return RedirectToAction("Index", "file");
             }
 
@@ -256,6 +267,8 @@ namespace WebApp.Controllers
 
                 db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
 
+
+                
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             }
 
@@ -263,6 +276,8 @@ namespace WebApp.Controllers
             СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
             СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
 
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
+            
             return RedirectToAction("Index", "file");
         }
    
