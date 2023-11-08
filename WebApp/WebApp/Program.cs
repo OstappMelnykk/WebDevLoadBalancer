@@ -58,17 +58,7 @@ namespace WebApp
             });
 
 
-            builder.Services.AddCookiePolicy(options => { options.MinimumSameSitePolicy = SameSiteMode.Lax; });
 
-            builder.Services.ConfigureApplicationCookie(options =>
-            {
-                options.Cookie.SameSite = SameSiteMode.Lax;              
-            });
-
-            builder.Services.Configure<ForwardedHeadersOptions>(options =>
-            {
-                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-            });
             #endregion
 
             builder.Services.AddControllersWithViews();
@@ -86,15 +76,6 @@ namespace WebApp
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            });
-
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedProto
-            });
 
             //app.UseHttpsRedirection();
             app.UseStaticFiles();
