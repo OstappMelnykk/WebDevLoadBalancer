@@ -148,7 +148,7 @@ namespace WebApp.Controllers
             List<Task> tasks = new List<Task>();
             List<Task> deleteTasks = new List<Task>();
 
-            Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
+            Parallel.ForEach(FilesToConvert, parallelOptions, (item) =>
             {
                 Task task = Task.Run(async () =>
                 {
@@ -251,7 +251,7 @@ namespace WebApp.Controllers
          
             if (!СancelBoolsForUser[User.Identity.Name]["isСanceled"])
             {
-                Parallel.ForEach(FilesToConvert, parallelOptions, (item, state) =>
+                Parallel.ForEach(FilesToConvert, parallelOptions, (item) =>
                 {
                     Task deleteTask = Task.Run(async () =>
                     {
@@ -355,7 +355,7 @@ namespace WebApp.Controllers
                 return null;
             }
 
-            double progressStep = 80.0 / (rowCount - 1); // Обчислюємо крок для досягнення 90% з 10% за весь рядок
+            double progressStep = 80.0 / (rowCount - 1); 
 
             double progress = 10; // Початковий прогрес
 
@@ -503,6 +503,9 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<ActionResult> Download(string blobPath)
         {
+
+            /*connectionString
+            containerName */
             var blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=webdevblobstorage111;AccountKey=34UT1RhvVbZySCEFwnvUjB6QWytyioSSE2dM3X5XPPS/riC1AhzmmckT+hlCRLn4JRCwAynDQY+4+AStSDlBmg==;EndpointSuffix=core.windows.net");
             var blobContainerClient = blobServiceClient.GetBlobContainerClient("webdev");
             var blobClient = blobContainerClient.GetBlobClient(blobPath);
