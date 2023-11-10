@@ -1,6 +1,7 @@
 ﻿@page
 @model IndexModel
-
+<a asp-controller="Home" asp-action="index">Home</a><br />
+<a asp-controller="Account" asp-action="Logout">Log off</a><br /><hr />
 <h1>Display of all running processes</h1>
 @if (ViewBag.DBFilesToConvert != null)
 {
@@ -41,9 +42,7 @@
                         <div class="content"><h2>@item.Title</h2></div>
 
                         <div class="itemContainer">
-                            <form asp-controller="File" asp-action="DeleteUploaded" asp-route-fullpath="@item.FullPath" method="post" enctype="multipart/form-data">
-                                <button type="submit">Delete</button>
-                            </form>
+                            
                         </div>
 
                         <div id="progressContainer_@Title">

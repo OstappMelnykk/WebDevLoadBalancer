@@ -1,15 +1,11 @@
-﻿using Aspose.Cells.Charts;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
+﻿using Azure.Storage.Blobs;
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using OfficeOpenXml;
-using System;
 using System.Diagnostics;
-using System.Drawing.Text;
 using System.Text;
 using WebApp.Hubs;
 using WebApp.Interfaces;
@@ -26,9 +22,14 @@ namespace WebApp.Controllers
         ApplicationContext db;
         private readonly IHubContext<ProgressHub> _hubContext;
         private readonly IHubContext<jsCodeHub> _hubContext_jsCodeHub;
+      
 
-        public FileController(ApplicationContext context, IAzureBlobStorageService azureBlobStorageService,
-            IHubContext<ProgressHub> hubContext, IHubContext<jsCodeHub> hubContext_jsCodeHub)
+
+        public FileController(
+            ApplicationContext context, 
+            IAzureBlobStorageService azureBlobStorageService,
+            IHubContext<ProgressHub> hubContext, 
+            IHubContext<jsCodeHub> hubContext_jsCodeHub)
         {       
             db = context;
             _azureBlobStorageService = azureBlobStorageService;
@@ -115,14 +116,27 @@ namespace WebApp.Controllers
 
         #region convertation proccess
 
-        [HttpPost]
-        public async Task<ActionResult> Process()
-        {
-            
 
-            if (User.Identity.IsAuthenticated)
+        [HttpPost]
+        public async Task<IActionResult> Process()
+        {
+            // Запускаємо _Process в фоновому потоці
+            bool IsAuthenticated = User.Identity.IsAuthenticated;
+            string Name = User.Identity.Name; 
+
+            BackgroundJob.Enqueue(() => _Process(IsAuthenticated, Name));
+
+            return RedirectToAction("Index");
+        }
+
+
+
+        //[HttpPost]
+        public async Task _Process(bool IsAuthenticated, string Name)
+        {
+            if (IsAuthenticated)
             {
-                string username = User.Identity.Name;
+                string username = Name;
 
                 if (!СancelBoolsForUser.ContainsKey(username))
                 {
@@ -135,8 +149,8 @@ namespace WebApp.Controllers
                 }
             }
 
-            var FilesToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
-            string _UserName = User.Identity.Name;
+            var FilesToConvert = db.FilesToConvert.Where(f => f.UserName == Name).ToList();
+            string _UserName = Name;
 
             int numberOfFiles = FilesToConvert.Count();
 
@@ -156,12 +170,12 @@ namespace WebApp.Controllers
                     string Title = item.Title.Split(".")[0];
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, item.Title.Replace(".", "-"));
 
-                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+                    if (СancelBoolsForUser[Name]["isСanceled"])
                     {
                         return;
                     }
              
-                    bool ConvertXlsxToTxtResult = await ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-"));
+                    bool ConvertXlsxToTxtResult = await ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-"), Name);
 
                     if (ConvertXlsxToTxtResult == false)
                     {
@@ -171,11 +185,11 @@ namespace WebApp.Controllers
                     {
                         lock (tasks)
                         {
-                            СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = true;
+                            СancelBoolsForUser[Name]["isUploadedOnlyToAzure"] = true;
                         }
                     }
          
-                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return;
+                    if (СancelBoolsForUser[Name]["isСanceled"]) return;
 
                     string folderPath = $"{_UserName}/ConvertedFiles/";
                     string fileName = $"{Title}.txt";
@@ -184,9 +198,9 @@ namespace WebApp.Controllers
                     lock (tasks)
                     {
                         AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
-                        СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = true; // Помічаємо, що є хоча б один успішно добавлений файл
+                        СancelBoolsForUser[Name]["isUploadedToAzureAndDB"] = true; // Помічаємо, що є хоча б один успішно добавлений файл
                     }
-                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"]) return;
+                    if (СancelBoolsForUser[Name]["isСanceled"]) return;
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
                 
                 });
@@ -198,39 +212,41 @@ namespace WebApp.Controllers
             
             //_hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"] && СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"])
+            if (СancelBoolsForUser[Name]["isСanceled"] && СancelBoolsForUser[Name]["isUploadedToAzureAndDB"])
             {
-                var ConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == User.Identity.Name).ToList();
-                var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+                var ConvertedFiles = db.ConvertedFiles.Where(f => f.UserName == Name).ToList();
+                var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == Name).ToList();
                 foreach (var item in F_ToConvert)
                 {
-                    var PathToDelete = $"{User.Identity.Name}/ConvertedFiles/" + item.Title.Split(".")[0] + ".txt";
+                    var PathToDelete = $"{Name}/ConvertedFiles/" + item.Title.Split(".")[0] + ".txt";
 
-                    db.DeleteConvertedFilesByUserNameAndFullPath(User.Identity.Name.ToString(), PathToDelete);
+                    db.DeleteConvertedFilesByUserNameAndFullPath(Name.ToString(), PathToDelete);
                     
                     await _azureBlobStorageService.DeleteBlobAsync(PathToDelete);
                 }
 
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
-                СancelBoolsForUser[User.Identity.Name]["isСanceled"] = false;
-                СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
-                СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
+                СancelBoolsForUser[Name]["isСanceled"] = false;
+                СancelBoolsForUser[Name]["isUploadedOnlyToAzure"] = false;
+                СancelBoolsForUser[Name]["isUploadedToAzureAndDB"] = false;
 
                 
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
-                return RedirectToAction("Index", "file");
+                //return RedirectToAction("Index", "file");
+                //return false;
+                return;
             }
 
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"] && 
-                СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] && 
-                !СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"])
+            if (СancelBoolsForUser[Name]["isСanceled"] && 
+                СancelBoolsForUser[Name]["isUploadedOnlyToAzure"] && 
+                !СancelBoolsForUser[Name]["isUploadedToAzureAndDB"])
             {
-                var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == User.Identity.Name).ToList();
+                var F_ToConvert = db.FilesToConvert.Where(f => f.UserName == Name).ToList();
                 foreach (var item in F_ToConvert)
                 {                   
-                    var PathToDelete = $"{User.Identity.Name}/ConvertedFiles/" + item.Title.Split(".")[0] + ".txt";
+                    var PathToDelete = $"{Name}/ConvertedFiles/" + item.Title.Split(".")[0] + ".txt";
 
                     if (await _azureBlobStorageService.IsPathExists(PathToDelete))
                     {
@@ -239,17 +255,19 @@ namespace WebApp.Controllers
                 }
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
 
-                СancelBoolsForUser[User.Identity.Name]["isСanceled"] = false;
-                СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
-                СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
+                СancelBoolsForUser[Name]["isСanceled"] = false;
+                СancelBoolsForUser[Name]["isUploadedOnlyToAzure"] = false;
+                СancelBoolsForUser[Name]["isUploadedToAzureAndDB"] = false;
 
                
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
-                return RedirectToAction("Index", "file");
+                //return RedirectToAction("Index", "file");
+                //return false;
+                return;
             }
 
          
-            if (!СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (!СancelBoolsForUser[Name]["isСanceled"])
             {
                 Parallel.ForEach(FilesToConvert, parallelOptions, (item) =>
                 {
@@ -265,20 +283,22 @@ namespace WebApp.Controllers
 
                 Task.WhenAll(deleteTasks).Wait();
 
-                db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
+                db.DeleteFilesToConvertByUserName(Name.ToString());
 
 
                 
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             }
 
-            СancelBoolsForUser[User.Identity.Name]["isСanceled"] = false;
-            СancelBoolsForUser[User.Identity.Name]["isUploadedOnlyToAzure"] = false;
-            СancelBoolsForUser[User.Identity.Name]["isUploadedToAzureAndDB"] = false;
+            СancelBoolsForUser[Name]["isСanceled"] = false;
+            СancelBoolsForUser[Name]["isUploadedOnlyToAzure"] = false;
+            СancelBoolsForUser[Name]["isUploadedToAzureAndDB"] = false;
 
             _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
-            
-            return RedirectToAction("Index", "file");
+
+            //return RedirectToAction("Index", "file");
+            //return true;
+            return;
         }
    
 
@@ -306,16 +326,16 @@ namespace WebApp.Controllers
             return columnWidths;
         }
 
-        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, string Title)
+        private async Task<string> ConvertToText(ExcelWorksheet worksheet, int[] columnWidths, string Title, string Name)
         {
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return null;
             }
 
             await _hubContext.Clients.All.SendAsync("ReceiveProgress", 10, Title);
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return null;
             }
@@ -329,7 +349,7 @@ namespace WebApp.Controllers
 
             StringBuilder textContent = new StringBuilder();
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return null;
             }
@@ -338,7 +358,7 @@ namespace WebApp.Controllers
 
             for (int col = 1; col <= colCount; col++)
             {
-                if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+                if (СancelBoolsForUser[Name]["isСanceled"])
                 {
                     return null;
                 }
@@ -350,7 +370,7 @@ namespace WebApp.Controllers
             textContent.AppendLine("|");
             textContent.AppendLine(horizontalLine);
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return null;
             }
@@ -366,7 +386,7 @@ namespace WebApp.Controllers
                     int a = -(columnWidths[col - 1] + 2);
                     textContent.AppendFormat("| {0," + a + "}", worksheet.Cells[row, col].Text);
 
-                    if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+                    if (СancelBoolsForUser[Name]["isСanceled"])
                     {
                         return null;
                     }
@@ -379,14 +399,14 @@ namespace WebApp.Controllers
 
             textContent.AppendLine(horizontalLine);
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return null;
             }
 
             await _hubContext.Clients.All.SendAsync("ReceiveProgress", 90, Title);
 
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return null;
             }
@@ -395,9 +415,9 @@ namespace WebApp.Controllers
 
 
         [NonAction]
-        private async Task<bool> ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, string Title)
+        private async Task<bool> ConvertXlsxToTxt(string xlsxFilePath, string newFileName, ApplicationContext db, string Title, string Name)
         {
-            if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+            if (СancelBoolsForUser[Name]["isСanceled"])
             {
                 return false;
             }
@@ -405,19 +425,19 @@ namespace WebApp.Controllers
             using (ExcelPackage package = await _azureBlobStorageService.GetExcelPackageFromAzureBlob(xlsxFilePath))
             {
                 ExcelWorksheet worksheet = package.Workbook.Worksheets[0];
-                if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+                if (СancelBoolsForUser[Name]["isСanceled"])
                 {
                     return false;
                 }
 
                 await _hubContext.Clients.All.SendAsync("ReceiveProgress", 6.5, Title);
 
-                if (СancelBoolsForUser[User.Identity.Name]["isСanceled"])
+                if (СancelBoolsForUser[Name]["isСanceled"])
                 {
                     return false;
                 }
 
-                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), Title);
+                string textContent = await ConvertToText(worksheet, CalculateColumnWidths(worksheet), Title, Name);
 
                 if (textContent == null)
                 {
@@ -426,7 +446,7 @@ namespace WebApp.Controllers
 
                 try
                 {                  
-                    string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, User.Identity.Name, newFileName, db);
+                    string uploadedFileUri = await _azureBlobStorageService.UploadFileAsync_TO_ConvertedFiles(textContent, Name, newFileName, db);
                     if (!string.IsNullOrEmpty(uploadedFileUri)) 
                     { 
                         ViewBag.Message = "File Upload Successful";

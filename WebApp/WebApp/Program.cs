@@ -1,14 +1,12 @@
-using Aspose.Cells.Charts;
-using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.HttpOverrides;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using WebApp.Hubs;
 using WebApp.Interfaces;
 using WebApp.Models;
 using WebApp.Services;
+using Hangfire.MemoryStorage;
 
 namespace WebApp
 {
@@ -17,6 +15,10 @@ namespace WebApp
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+
+            builder.Services.AddHangfire(config => config.UseMemoryStorage());
+
 
             builder.Services.AddSignalR();
 
@@ -64,6 +66,15 @@ namespace WebApp
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
+
+
+
+            app.UseHangfireDashboard();
+            app.UseHangfireServer();
+
+
+
+
             app.UseForwardedHeaders();
 
             if (!app.Environment.IsDevelopment()){
