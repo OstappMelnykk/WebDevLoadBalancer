@@ -1,4 +1,5 @@
-﻿using Azure.Storage.Blobs;
+﻿using Aspose.Cells;
+using Azure.Storage.Blobs;
 using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +17,10 @@ namespace WebApp.Controllers
     [Authorize]
     public class FileController : Controller
     {
+        private static Dictionary<string, bool> IsWorking = new Dictionary<string,bool>();
         private static Dictionary<string, Dictionary<string, bool>> СancelBoolsForUser = new Dictionary<string, Dictionary<string, bool>>();
+
+
 
         private readonly IAzureBlobStorageService _azureBlobStorageService;
         ApplicationContext db;
@@ -50,6 +54,8 @@ namespace WebApp.Controllers
             ViewBag.DBFilesToConvert = db.FilesToConvert.ToList();
             return View();
         }
+
+
 
 
 
@@ -90,7 +96,6 @@ namespace WebApp.Controllers
             return RedirectToAction("Index", "file");
         }
 
-
         [HttpPost]
         public async Task<ActionResult> Сancel()
         {
@@ -108,7 +113,14 @@ namespace WebApp.Controllers
                     };
                 }
             }
-            СancelBoolsForUser[User.Identity.Name]["isСanceled"] = true;
+
+            if (IsWorking[User.Identity.Name] == true)
+            {
+                СancelBoolsForUser[User.Identity.Name]["isСanceled"] = true;
+            }
+
+
+            
 
             //_hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("index");
@@ -120,10 +132,12 @@ namespace WebApp.Controllers
         [HttpPost]
         public async Task<IActionResult> Process()
         {
+
             // Запускаємо _Process в фоновому потоці
             bool IsAuthenticated = User.Identity.IsAuthenticated;
-            string Name = User.Identity.Name; 
+            string Name = User.Identity.Name;
 
+                 
             BackgroundJob.Enqueue(() => _Process(IsAuthenticated, Name));
 
             return RedirectToAction("Index");
@@ -147,6 +161,14 @@ namespace WebApp.Controllers
                         { "isUploadedToAzureAndDB", false }
                     };
                 }
+
+
+                /*if (!IsWorking.ContainsKey(username))
+                {
+                    IsWorking[username] = true;
+                }*/
+                IsWorking[username] = true;
+
             }
 
             var FilesToConvert = db.FilesToConvert.Where(f => f.UserName == Name).ToList();
@@ -168,11 +190,14 @@ namespace WebApp.Controllers
                 {
                     string filePath = item.FullPath;
                     string Title = item.Title.Split(".")[0];
+                    Thread.Sleep(2000);
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 2, item.Title.Replace(".", "-"));
 
                     if (СancelBoolsForUser[Name]["isСanceled"])
                     {
+                        //IsWorking[Name] = false;
                         return;
+                        
                     }
              
                     bool ConvertXlsxToTxtResult = await ConvertXlsxToTxt(filePath, Title, db, item.Title.Replace(".", "-"), Name);
@@ -188,8 +213,12 @@ namespace WebApp.Controllers
                             СancelBoolsForUser[Name]["isUploadedOnlyToAzure"] = true;
                         }
                     }
-         
-                    if (СancelBoolsForUser[Name]["isСanceled"]) return;
+
+                    if (СancelBoolsForUser[Name]["isСanceled"])
+                    {
+                        //IsWorking[Name] = false;
+                        return;
+                    }
 
                     string folderPath = $"{_UserName}/ConvertedFiles/";
                     string fileName = $"{Title}.txt";
@@ -200,7 +229,11 @@ namespace WebApp.Controllers
                         AddFileTo_ConvertedFiles_Db(fileName, folderPath, folderPath + fileName, _UserName, user.Id.ToString(), user, db);
                         СancelBoolsForUser[Name]["isUploadedToAzureAndDB"] = true; // Помічаємо, що є хоча б один успішно добавлений файл
                     }
-                    if (СancelBoolsForUser[Name]["isСanceled"]) return;
+                    if (СancelBoolsForUser[Name]["isСanceled"])
+                    {
+                        //IsWorking[Name] = false;
+                        return;
+                    }
                     _hubContext.Clients.All.SendAsync("ReceiveProgress", 100, item.Title.Replace(".", "-"));
                 
                 });
@@ -235,6 +268,8 @@ namespace WebApp.Controllers
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
                 //return RedirectToAction("Index", "file");
                 //return false;
+                IsWorking[Name] = false;
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
                 return;
             }
 
@@ -263,6 +298,8 @@ namespace WebApp.Controllers
                 _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
                 //return RedirectToAction("Index", "file");
                 //return false;
+                IsWorking[Name] = false;
+                _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
                 return;
             }
 
@@ -298,6 +335,7 @@ namespace WebApp.Controllers
 
             //return RedirectToAction("Index", "file");
             //return true;
+            IsWorking[Name] = false;
             return;
         }
    
@@ -548,7 +586,7 @@ namespace WebApp.Controllers
             db.DeleteConvertedFilesByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
 
             await _azureBlobStorageService.DeleteBlobAsync(fullpath);
-
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("Index", "file");
         }
 
@@ -558,7 +596,7 @@ namespace WebApp.Controllers
             db.DeleteFilesToConvertByUserNameAndFullPath(User.Identity.Name.ToString(), fullpath);
 
             await _azureBlobStorageService.DeleteBlobAsync(fullpath);
-
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("Index", "file");
         }
 
@@ -574,7 +612,7 @@ namespace WebApp.Controllers
             }
 
             db.DeleteConvertedFilesByUserName(User.Identity.Name.ToString());
-
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("Index", "file");
         }
 
@@ -589,7 +627,7 @@ namespace WebApp.Controllers
                 await _azureBlobStorageService.DeleteBlobAsync(fullpath);
             }
             db.DeleteFilesToConvertByUserName(User.Identity.Name.ToString());
-
+            _hubContext_jsCodeHub.Clients.All.SendAsync("ExecuteJavaScript", "location.reload();");
             return RedirectToAction("Index", "file");
         }
         #endregion
